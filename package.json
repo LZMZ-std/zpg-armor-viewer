@@ -1,0 +1,10 @@
+{
+  "name": "zpg-armor-viewer",
+  "private": true,
+  "scripts": {
+    "build:windows": "python build-windows.py node_modules/esbuild"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.1"
+  }
+}
