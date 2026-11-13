@@ -6,7 +6,8 @@ import { OrbitControls } from './assets/vendor/three/OrbitControls.js';
 import { readPsdComposite } from './psd-composite.js';
 
 const panel = document.getElementById('armor-view');
-const slots = { helmet: 'Шлем', nvg: 'ПНВ / NVG', upper: 'Верх', vest: 'Жилет', lower: 'Низ', backpack: 'Рюкзак' };
+const slots = { helmet: 'Шлем', visor: 'Визор', nvg: 'ПНВ / NVG', upper: 'Верх', vest: 'Жилет', lower: 'Низ', backpack: 'Рюкзак' };
+const isVisor = slot => /visor|glass/i.test(slot);
 const initialModels = {
   helmet: 'QS_0th_P2_V1_H', upper: 'QS_0th_P2_V1_A', backpack: 'QS_0th_L_V1_B', vest: '', nvg: ''
 };
@@ -46,7 +47,9 @@ function textureSection(slot, label) {
     <button class="armor-isolate-button" type="button" data-isolate="${slot}" aria-pressed="false" disabled>Изолировать · I</button>
     ${slot === 'lower'
       ? '<p class="armor-note">Модель верха и низа выбирается в блоке «Верх».</p>'
-      : '<label class="armor-field"><span>Модель</span><select data-model disabled></select></label>'}
+      : slot === 'visor'
+        ? '<p class="armor-note" id="armor-visor-note"></p><p class="armor-note"><a id="armor-visor-template" download hidden>Скачать штатную карту визора</a></p>'
+        : '<label class="armor-field"><span>Модель</span><select data-model disabled></select></label>'}
     ${slot === 'helmet' ? orientationField : ''}
     ${slot === 'nvg' ? '<label class="armor-switch" id="armor-nvg-position" hidden>Опустить ПНВ<input id="armor-nvg-down" type="checkbox" disabled></label>' : ''}
     ${slot === 'helmet' ? '<p class="armor-note"><a id="armor-helmet-template" download>Скачать развёртку выбранного шлема</a></p><label class="armor-note"><input type="checkbox" id="armor-helmet-original"> Показать штатную текстуру</label>' : ''}
@@ -164,13 +167,14 @@ function buildPart(parts, kind, maps) {
   parts.forEach((part,i)=>{
     let slot=part.slot, map;
     if(kind==='body') map=slot==='camo1'?maps.upper:slot==='camo2'?maps.lower:maps.undersuit;
-    else map=/visor|glass/.test(slot)?maps.visor:/flap|camo2/.test(slot)?maps.flaps:/illum|light/.test(slot)?maps.light:maps.main;
+    else map=isVisor(slot)?maps.visor:/flap|camo2/.test(slot)?maps.flaps:/illum|light/.test(slot)?maps.light:maps.main;
     const mat=new THREE.MeshStandardMaterial({map, color:map?0xffffff:kind==='body'?0x17212a:0xe6e8e9,roughness:/visor|glass/.test(slot)?.22:.64,metalness:/visor|glass/.test(slot)?.3:.08,side:THREE.DoubleSide});
     const mesh=new THREE.Mesh(kind==='body'?part.geometry.clone():part.geometry,mat);mesh.userData.slot=slot; mesh.userData.originalMap=map;
     mesh.userData.originalColor = mat.color.clone();
     mesh.castShadow=true;mesh.receiveShadow=false;
     if(kind==='body')mesh.userData.restGeometry=part.geometry;
     if(kind==='helmet'&&/flap|camo2/.test(slot)&&!maps.flaps&&!maps.keepFlaps)mesh.visible=false;
+    mesh.userData.initialVisibility = mesh.visible;
     group.add(mesh);
   });
   // The game uses a hip-centered origin; both models share the same frame.
@@ -259,8 +263,9 @@ async function buildModel(slot, id, lowered) {
   const flapIndex = item.slots.findIndex(name => /flap|camo2/i.test(name));
   const keepFlaps = item.useModelMaterial?.includes(flapIndex);
   const flapUrl = item.maps[flapIndex] || (keepFlaps ? defaultFor(/flap|camo2/i) : null);
+  const visorUrl = mapFor(/visor|glass/i) || defaultFor(/visor|glass/i) || catalog.visor;
   const [main, visor, flaps, light] = await Promise.all([
-    getTexture(mainUrl), getTexture(mapFor(/visor/i) || defaultFor(/visor|glass/i) || catalog.visor),
+    getTexture(mainUrl), getTexture(visorUrl),
     getTexture(flapUrl), getTexture(mapFor(/illum|light/i))
   ]);
   const group = buildPart(parts, 'helmet', { main, visor, flaps, light, keepFlaps });
@@ -268,6 +273,9 @@ async function buildModel(slot, id, lowered) {
   group.userData.primaryMap = main;
   group.userData.template = main?.image;
   group.userData.templateName = mainUrl?.split('/').pop();
+  group.userData.hasVisor = parts.some(part => isVisor(part.slot));
+  group.userData.visorTemplate = visor?.image;
+  group.userData.visorTemplateName = visorUrl?.split('/').pop();
   return group;
 }
 
@@ -278,6 +286,9 @@ function updateSlotControls() {
     section.querySelector('[data-isolate]').disabled = !ready || !partFor(slot);
     section.querySelector('[data-reset]').disabled = !ready || (!customTextures.has(slot) && !liveTextures.has(slot));
   }
+  $('#armor-visor-note').textContent = helmet?.userData.hasVisor
+    ? 'Подключи отдельную текстуру визора.'
+    : 'У выбранного шлема визор входит в общую текстуру. Подключи файл в разделе «Шлем».';
 }
 
 async function changeModel(slot, id, lowered = false) {
@@ -287,7 +298,8 @@ async function changeModel(slot, id, lowered = false) {
   try {
     const next = await buildModel(slot, id, lowered);
     const previous = partFor(slot);
-    const affectedSlots = slot === 'upper' ? ['upper', 'lower'] : [slot];
+    const affectedSlots = slot === 'upper' ? ['upper', 'lower']
+      : slot === 'helmet' ? ['helmet', 'visor'] : [slot];
     if (previous && previous.userData.uvLayout !== next?.userData.uvLayout) {
       if (slot === 'helmet') $('#armor-helmet-orientation').value = 'normal';
       for (const affected of affectedSlots) {
@@ -324,6 +336,12 @@ async function changeModel(slot, id, lowered = false) {
       if (next.userData.template) {
         link.href = next.userData.template.src;
         link.download = next.userData.templateName;
+      }
+      const visorLink = $('#armor-visor-template');
+      visorLink.hidden = !next.userData.hasVisor || !next.userData.visorTemplate;
+      if (!visorLink.hidden) {
+        visorLink.href = next.userData.visorTemplate.src;
+        visorLink.download = next.userData.visorTemplateName;
       }
     }
     if (slot === 'upper' || slot === 'vest') applyPose();
@@ -384,6 +402,17 @@ function resetQuadCamera(view) {
 }
 
 function render() {
+  if (!renderer || !visible() || raf) return;
+  raf = requestAnimationFrame(() => {
+    // A control change during this frame is included in the draw below.
+    const moving = ready && !quadMode && controls.update();
+    raf = 0;
+    drawFrame();
+    if (moving) render();
+  });
+}
+
+function drawFrame() {
   if (!renderer || !visible()) return;
   const width = canvas.clientWidth;
   const height = canvas.clientHeight;
@@ -446,21 +475,15 @@ function setQuadMode(active) {
   controls.enabled = !active;
   resize();
 }
-function stopLoop(){if(raf)cancelAnimationFrame(raf);raf=0;}
-function startLoop() {
-  stopLoop();
-  if (!ready || !visible()) return;
-  function tick() {
-    if (!quadMode) controls.update();
-    raf = requestAnimationFrame(tick);
-  }
-  raf = requestAnimationFrame(tick);
+function cancelFrame() {
+  if (raf) cancelAnimationFrame(raf);
+  raf = 0;
 }
 function cameraView(view){
   if(!camera)return;
   controls.target.set(0,1,0);
   const distance=camera.aspect<.9?4.4:3.5;
-  if(view==='head'||view==='helmet'||view==='nvg'){controls.target.set(0,1.73,0);camera.position.set(.16,1.78,1.05);}
+  if(view==='head'||view==='helmet'||view==='visor'||view==='nvg'){controls.target.set(0,1.73,0);camera.position.set(.16,1.78,1.05);}
   else if(view==='vest'||view==='upper'){controls.target.set(0,1.26,0);camera.position.set(.25,1.33,1.5);}
   else if(view==='lower'){controls.target.set(0,.62,0);camera.position.set(.26,.74,1.75);}
   else if(view==='backpack'){controls.target.set(0,1.27,0);camera.position.set(-.24,1.35,-1.55);}
@@ -539,7 +562,6 @@ async function boot() {
     for (const input of Object.values(modelInputs)) input.disabled = false;
     updateSlotControls();
     render();
-    startLoop();
   } catch (error) {
     status.textContent = /WebGL/i.test(error.message)
       ? 'Не удалось запустить WebGL 2.'
@@ -586,6 +608,10 @@ function updateIsolation() {
     mesh.visible = target !== body ||
       material === (isolatedSlot === 'lower' ? 'camo2' : 'camo1');
   });
+  for (const mesh of helmet?.children ?? []) {
+    if (isVisor(mesh.userData.slot)) mesh.visible = true;
+    else if (mesh.isMesh) mesh.visible = mesh.userData.initialVisibility && isolatedSlot !== 'visor';
+  }
   for (const [slot, section] of Object.entries(sections)) {
     const button = section.querySelector('[data-isolate]');
     button.setAttribute('aria-pressed', String(isolatedSlot === slot));
@@ -710,7 +736,10 @@ canvas.addEventListener('pointerup', event => {
   const pane = paneAt(event);
   if (!pane) return;
   cursor.set(2 * pane.x - 1, 1 - 2 * pane.y);
-  raycaster.setFromCamera(cursor, pane.view?.camera ?? camera);
+  const pickCamera = pane.view?.camera ?? camera;
+  pickCamera.updateMatrixWorld();
+  scene.updateMatrixWorld();
+  raycaster.setFromCamera(cursor, pickCamera);
   const parts = [helmet, nvg, body, vest, backpack].filter(Boolean);
   const hit = raycaster.intersectObjects(parts).find(({ object }) => object.visible && object.parent.visible);
   if (!hit) {
@@ -722,6 +751,8 @@ canvas.addEventListener('pointerup', event => {
     const materialSlot = hit.object.userData.slot;
     const lower = materialSlot === 'camo2' || (materialSlot !== 'camo1' && hit.point.y < 1);
     showPartSettings(lower ? 'lower' : 'upper');
+  } else if (part === helmet && isVisor(hit.object.userData.slot)) {
+    showPartSettings('visor');
   } else {
     showPartSettings(Object.keys(slots).find(slot => partFor(slot) === part));
   }
@@ -769,6 +800,7 @@ $('#armor-helmet-original').addEventListener('change', event => {
 
 function partFor(slot) {
   if (slot === 'helmet') return helmet;
+  if (slot === 'visor') return helmet?.userData.hasVisor ? helmet : null;
   if (slot === 'backpack') return backpack;
   if (slot === 'vest') return vest;
   if (slot === 'nvg') return nvg;
@@ -782,6 +814,7 @@ function setSlotTexture(slot, texture) {
     const materialSlot = mesh.userData.slot;
     const matches = slot === 'upper' ? materialSlot === 'camo1'
       : slot === 'lower' ? materialSlot === 'camo2'
+      : slot === 'visor' ? isVisor(materialSlot)
       : slot === 'helmet' ? helmet.userData.primaryMap
         ? mesh.userData.originalMap === helmet.userData.primaryMap && !/visor|glass/i.test(materialSlot)
         : !/visor|glass|flap|camo2|illum|light/i.test(materialSlot)
@@ -810,7 +843,8 @@ async function applyCustomTexture(file, slot, isCurrent = () => true) {
       texture.dispose();
       return false;
     }
-    const template = slot === 'helmet' ? helmet.userData.template : null;
+    const template = slot === 'helmet' ? helmet.userData.template
+      : slot === 'visor' ? helmet.userData.visorTemplate : null;
     if (template && Math.abs(texture.image.width / texture.image.height - template.width / template.height) > .01) {
       texture.dispose();
       throw new Error(`Размер кадра не совпадает с развёрткой. Нужен полный холст с пропорциями ${template.width} × ${template.height}.`);
@@ -894,14 +928,12 @@ canvas.addEventListener('keydown', event => {
 });
 new ResizeObserver(resize).observe(stage);
 document.addEventListener('visibilitychange', () => {
-  if (visible()) {
-    resize();
-    startLoop();
-  } else stopLoop();
+  if (visible()) resize();
+  else cancelFrame();
 });
 canvas.addEventListener('webglcontextlost', event => {
   event.preventDefault();
-  stopLoop();
+  cancelFrame();
   message('Графический контекст потерян. Обнови страницу.');
 });
 boot();

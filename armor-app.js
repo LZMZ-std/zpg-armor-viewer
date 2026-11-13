@@ -34537,7 +34537,8 @@ void main() {
 
   // armor.js
   var panel = document.getElementById("armor-view");
-  var slots = { helmet: "\u0428\u043B\u0435\u043C", nvg: "\u041F\u041D\u0412 / NVG", upper: "\u0412\u0435\u0440\u0445", vest: "\u0416\u0438\u043B\u0435\u0442", lower: "\u041D\u0438\u0437", backpack: "\u0420\u044E\u043A\u0437\u0430\u043A" };
+  var slots = { helmet: "\u0428\u043B\u0435\u043C", visor: "\u0412\u0438\u0437\u043E\u0440", nvg: "\u041F\u041D\u0412 / NVG", upper: "\u0412\u0435\u0440\u0445", vest: "\u0416\u0438\u043B\u0435\u0442", lower: "\u041D\u0438\u0437", backpack: "\u0420\u044E\u043A\u0437\u0430\u043A" };
+  var isVisor = (slot) => /visor|glass/i.test(slot);
   var initialModels = {
     helmet: "QS_0th_P2_V1_H",
     upper: "QS_0th_P2_V1_A",
@@ -34578,7 +34579,7 @@ void main() {
     <h2 class="armor-control-title">${label}</h2>
     <button class="armor-focus-button" type="button" data-focus="${slot}" disabled aria-label="${label} \u043A\u0440\u0443\u043F\u043D\u044B\u043C \u043F\u043B\u0430\u043D\u043E\u043C">\u041A\u0440\u0443\u043F\u043D\u043E</button>
     <button class="armor-isolate-button" type="button" data-isolate="${slot}" aria-pressed="false" disabled>\u0418\u0437\u043E\u043B\u0438\u0440\u043E\u0432\u0430\u0442\u044C \xB7 I</button>
-    ${slot === "lower" ? '<p class="armor-note">\u041C\u043E\u0434\u0435\u043B\u044C \u0432\u0435\u0440\u0445\u0430 \u0438 \u043D\u0438\u0437\u0430 \u0432\u044B\u0431\u0438\u0440\u0430\u0435\u0442\u0441\u044F \u0432 \u0431\u043B\u043E\u043A\u0435 \xAB\u0412\u0435\u0440\u0445\xBB.</p>' : '<label class="armor-field"><span>\u041C\u043E\u0434\u0435\u043B\u044C</span><select data-model disabled></select></label>'}
+    ${slot === "lower" ? '<p class="armor-note">\u041C\u043E\u0434\u0435\u043B\u044C \u0432\u0435\u0440\u0445\u0430 \u0438 \u043D\u0438\u0437\u0430 \u0432\u044B\u0431\u0438\u0440\u0430\u0435\u0442\u0441\u044F \u0432 \u0431\u043B\u043E\u043A\u0435 \xAB\u0412\u0435\u0440\u0445\xBB.</p>' : slot === "visor" ? '<p class="armor-note" id="armor-visor-note"></p><p class="armor-note"><a id="armor-visor-template" download hidden>\u0421\u043A\u0430\u0447\u0430\u0442\u044C \u0448\u0442\u0430\u0442\u043D\u0443\u044E \u043A\u0430\u0440\u0442\u0443 \u0432\u0438\u0437\u043E\u0440\u0430</a></p>' : '<label class="armor-field"><span>\u041C\u043E\u0434\u0435\u043B\u044C</span><select data-model disabled></select></label>'}
     ${slot === "helmet" ? orientationField : ""}
     ${slot === "nvg" ? '<label class="armor-switch" id="armor-nvg-position" hidden>\u041E\u043F\u0443\u0441\u0442\u0438\u0442\u044C \u041F\u041D\u0412<input id="armor-nvg-down" type="checkbox" disabled></label>' : ""}
     ${slot === "helmet" ? '<p class="armor-note"><a id="armor-helmet-template" download>\u0421\u043A\u0430\u0447\u0430\u0442\u044C \u0440\u0430\u0437\u0432\u0451\u0440\u0442\u043A\u0443 \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u043E\u0433\u043E \u0448\u043B\u0435\u043C\u0430</a></p><label class="armor-note"><input type="checkbox" id="armor-helmet-original"> \u041F\u043E\u043A\u0430\u0437\u0430\u0442\u044C \u0448\u0442\u0430\u0442\u043D\u0443\u044E \u0442\u0435\u043A\u0441\u0442\u0443\u0440\u0443</label>' : ""}
@@ -34722,7 +34723,7 @@ void main() {
     parts.forEach((part, i) => {
       let slot = part.slot, map;
       if (kind === "body") map = slot === "camo1" ? maps.upper : slot === "camo2" ? maps.lower : maps.undersuit;
-      else map = /visor|glass/.test(slot) ? maps.visor : /flap|camo2/.test(slot) ? maps.flaps : /illum|light/.test(slot) ? maps.light : maps.main;
+      else map = isVisor(slot) ? maps.visor : /flap|camo2/.test(slot) ? maps.flaps : /illum|light/.test(slot) ? maps.light : maps.main;
       const mat = new MeshStandardMaterial({ map, color: map ? 16777215 : kind === "body" ? 1515818 : 15132905, roughness: /visor|glass/.test(slot) ? 0.22 : 0.64, metalness: /visor|glass/.test(slot) ? 0.3 : 0.08, side: DoubleSide });
       const mesh = new Mesh(kind === "body" ? part.geometry.clone() : part.geometry, mat);
       mesh.userData.slot = slot;
@@ -34732,6 +34733,7 @@ void main() {
       mesh.receiveShadow = false;
       if (kind === "body") mesh.userData.restGeometry = part.geometry;
       if (kind === "helmet" && /flap|camo2/.test(slot) && !maps.flaps && !maps.keepFlaps) mesh.visible = false;
+      mesh.userData.initialVisibility = mesh.visible;
       group.add(mesh);
     });
     group.position.y = 1.008694;
@@ -34832,9 +34834,10 @@ void main() {
     const flapIndex = item.slots.findIndex((name) => /flap|camo2/i.test(name));
     const keepFlaps = item.useModelMaterial?.includes(flapIndex);
     const flapUrl = item.maps[flapIndex] || (keepFlaps ? defaultFor(/flap|camo2/i) : null);
+    const visorUrl = mapFor(/visor|glass/i) || defaultFor(/visor|glass/i) || catalog.visor;
     const [main, visor, flaps, light] = await Promise.all([
       getTexture(mainUrl),
-      getTexture(mapFor(/visor/i) || defaultFor(/visor|glass/i) || catalog.visor),
+      getTexture(visorUrl),
       getTexture(flapUrl),
       getTexture(mapFor(/illum|light/i))
     ]);
@@ -34843,6 +34846,9 @@ void main() {
     group.userData.primaryMap = main;
     group.userData.template = main?.image;
     group.userData.templateName = mainUrl?.split("/").pop();
+    group.userData.hasVisor = parts.some((part) => isVisor(part.slot));
+    group.userData.visorTemplate = visor?.image;
+    group.userData.visorTemplateName = visorUrl?.split("/").pop();
     return group;
   }
   function updateSlotControls() {
@@ -34852,6 +34858,7 @@ void main() {
       section.querySelector("[data-isolate]").disabled = !ready || !partFor(slot);
       section.querySelector("[data-reset]").disabled = !ready || !customTextures.has(slot) && !liveTextures.has(slot);
     }
+    $("#armor-visor-note").textContent = helmet?.userData.hasVisor ? "\u041F\u043E\u0434\u043A\u043B\u044E\u0447\u0438 \u043E\u0442\u0434\u0435\u043B\u044C\u043D\u0443\u044E \u0442\u0435\u043A\u0441\u0442\u0443\u0440\u0443 \u0432\u0438\u0437\u043E\u0440\u0430." : "\u0423 \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u043E\u0433\u043E \u0448\u043B\u0435\u043C\u0430 \u0432\u0438\u0437\u043E\u0440 \u0432\u0445\u043E\u0434\u0438\u0442 \u0432 \u043E\u0431\u0449\u0443\u044E \u0442\u0435\u043A\u0441\u0442\u0443\u0440\u0443. \u041F\u043E\u0434\u043A\u043B\u044E\u0447\u0438 \u0444\u0430\u0439\u043B \u0432 \u0440\u0430\u0437\u0434\u0435\u043B\u0435 \xAB\u0428\u043B\u0435\u043C\xBB.";
   }
   async function changeModel(slot, id, lowered = false) {
     const input = modelInputs[slot];
@@ -34860,7 +34867,7 @@ void main() {
     try {
       const next = await buildModel(slot, id, lowered);
       const previous = partFor(slot);
-      const affectedSlots = slot === "upper" ? ["upper", "lower"] : [slot];
+      const affectedSlots = slot === "upper" ? ["upper", "lower"] : slot === "helmet" ? ["helmet", "visor"] : [slot];
       if (previous && previous.userData.uvLayout !== next?.userData.uvLayout) {
         if (slot === "helmet") $("#armor-helmet-orientation").value = "normal";
         for (const affected of affectedSlots) {
@@ -34896,6 +34903,12 @@ void main() {
         if (next.userData.template) {
           link.href = next.userData.template.src;
           link.download = next.userData.templateName;
+        }
+        const visorLink = $("#armor-visor-template");
+        visorLink.hidden = !next.userData.hasVisor || !next.userData.visorTemplate;
+        if (!visorLink.hidden) {
+          visorLink.href = next.userData.visorTemplate.src;
+          visorLink.download = next.userData.visorTemplateName;
         }
       }
       if (slot === "upper" || slot === "vest") applyPose();
@@ -34952,6 +34965,15 @@ void main() {
     updateQuadCamera(view, camera.aspect);
   }
   function render() {
+    if (!renderer || !visible() || raf) return;
+    raf = requestAnimationFrame(() => {
+      const moving = ready && !quadMode && controls.update();
+      raf = 0;
+      drawFrame();
+      if (moving) render();
+    });
+  }
+  function drawFrame() {
     if (!renderer || !visible()) return;
     const width = canvas.clientWidth;
     const height = canvas.clientHeight;
@@ -35011,24 +35033,15 @@ void main() {
     controls.enabled = !active;
     resize();
   }
-  function stopLoop() {
+  function cancelFrame() {
     if (raf) cancelAnimationFrame(raf);
     raf = 0;
-  }
-  function startLoop() {
-    stopLoop();
-    if (!ready || !visible()) return;
-    function tick() {
-      if (!quadMode) controls.update();
-      raf = requestAnimationFrame(tick);
-    }
-    raf = requestAnimationFrame(tick);
   }
   function cameraView(view) {
     if (!camera) return;
     controls.target.set(0, 1, 0);
     const distance = camera.aspect < 0.9 ? 4.4 : 3.5;
-    if (view === "head" || view === "helmet" || view === "nvg") {
+    if (view === "head" || view === "helmet" || view === "visor" || view === "nvg") {
       controls.target.set(0, 1.73, 0);
       camera.position.set(0.16, 1.78, 1.05);
     } else if (view === "vest" || view === "upper") {
@@ -35113,7 +35126,6 @@ void main() {
       for (const input of Object.values(modelInputs)) input.disabled = false;
       updateSlotControls();
       render();
-      startLoop();
     } catch (error) {
       status.textContent = /WebGL/i.test(error.message) ? "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0437\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u044C WebGL 2." : "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043E\u0442\u043A\u0440\u044B\u0442\u044C \u043C\u043E\u0434\u0435\u043B\u044C. \u041F\u0440\u043E\u0432\u0435\u0440\u044C, \u0447\u0442\u043E \u043F\u0430\u043F\u043A\u0430 assets \u043D\u0430\u0445\u043E\u0434\u0438\u0442\u0441\u044F \u0440\u044F\u0434\u043E\u043C \u0441 HTML.";
       console.error(error);
@@ -35154,6 +35166,10 @@ void main() {
       const material = mesh.userData.slot;
       mesh.visible = target !== body || material === (isolatedSlot === "lower" ? "camo2" : "camo1");
     });
+    for (const mesh of helmet?.children ?? []) {
+      if (isVisor(mesh.userData.slot)) mesh.visible = true;
+      else if (mesh.isMesh) mesh.visible = mesh.userData.initialVisibility && isolatedSlot !== "visor";
+    }
     for (const [slot, section] of Object.entries(sections)) {
       const button = section.querySelector("[data-isolate]");
       button.setAttribute("aria-pressed", String(isolatedSlot === slot));
@@ -35266,7 +35282,10 @@ void main() {
     const pane = paneAt(event);
     if (!pane) return;
     cursor.set(2 * pane.x - 1, 1 - 2 * pane.y);
-    raycaster.setFromCamera(cursor, pane.view?.camera ?? camera);
+    const pickCamera = pane.view?.camera ?? camera;
+    pickCamera.updateMatrixWorld();
+    scene.updateMatrixWorld();
+    raycaster.setFromCamera(cursor, pickCamera);
     const parts = [helmet, nvg, body, vest, backpack].filter(Boolean);
     const hit = raycaster.intersectObjects(parts).find(({ object }) => object.visible && object.parent.visible);
     if (!hit) {
@@ -35278,6 +35297,8 @@ void main() {
       const materialSlot = hit.object.userData.slot;
       const lower = materialSlot === "camo2" || materialSlot !== "camo1" && hit.point.y < 1;
       showPartSettings(lower ? "lower" : "upper");
+    } else if (part === helmet && isVisor(hit.object.userData.slot)) {
+      showPartSettings("visor");
     } else {
       showPartSettings(Object.keys(slots).find((slot) => partFor(slot) === part));
     }
@@ -35320,6 +35341,7 @@ void main() {
   });
   function partFor(slot) {
     if (slot === "helmet") return helmet;
+    if (slot === "visor") return helmet?.userData.hasVisor ? helmet : null;
     if (slot === "backpack") return backpack;
     if (slot === "vest") return vest;
     if (slot === "nvg") return nvg;
@@ -35330,7 +35352,7 @@ void main() {
     partFor(slot)?.traverse((mesh) => {
       if (!mesh.isMesh) return;
       const materialSlot = mesh.userData.slot;
-      const matches = slot === "upper" ? materialSlot === "camo1" : slot === "lower" ? materialSlot === "camo2" : slot === "helmet" ? helmet.userData.primaryMap ? mesh.userData.originalMap === helmet.userData.primaryMap && !/visor|glass/i.test(materialSlot) : !/visor|glass|flap|camo2|illum|light/i.test(materialSlot) : !/visor|glass|flap|illum|light/i.test(materialSlot);
+      const matches = slot === "upper" ? materialSlot === "camo1" : slot === "lower" ? materialSlot === "camo2" : slot === "visor" ? isVisor(materialSlot) : slot === "helmet" ? helmet.userData.primaryMap ? mesh.userData.originalMap === helmet.userData.primaryMap && !/visor|glass/i.test(materialSlot) : !/visor|glass|flap|camo2|illum|light/i.test(materialSlot) : !/visor|glass|flap|illum|light/i.test(materialSlot);
       if (!matches) return;
       mesh.material.map = texture ?? mesh.userData.originalMap;
       if (texture) mesh.material.color.setHex(16777215);
@@ -35352,7 +35374,7 @@ void main() {
         texture.dispose();
         return false;
       }
-      const template = slot === "helmet" ? helmet.userData.template : null;
+      const template = slot === "helmet" ? helmet.userData.template : slot === "visor" ? helmet.userData.visorTemplate : null;
       if (template && Math.abs(texture.image.width / texture.image.height - template.width / template.height) > 0.01) {
         texture.dispose();
         throw new Error(`\u0420\u0430\u0437\u043C\u0435\u0440 \u043A\u0430\u0434\u0440\u0430 \u043D\u0435 \u0441\u043E\u0432\u043F\u0430\u0434\u0430\u0435\u0442 \u0441 \u0440\u0430\u0437\u0432\u0451\u0440\u0442\u043A\u043E\u0439. \u041D\u0443\u0436\u0435\u043D \u043F\u043E\u043B\u043D\u044B\u0439 \u0445\u043E\u043B\u0441\u0442 \u0441 \u043F\u0440\u043E\u043F\u043E\u0440\u0446\u0438\u044F\u043C\u0438 ${template.width} \xD7 ${template.height}.`);
@@ -35434,14 +35456,12 @@ void main() {
   });
   new ResizeObserver(resize).observe(stage);
   document.addEventListener("visibilitychange", () => {
-    if (visible()) {
-      resize();
-      startLoop();
-    } else stopLoop();
+    if (visible()) resize();
+    else cancelFrame();
   });
   canvas.addEventListener("webglcontextlost", (event) => {
     event.preventDefault();
-    stopLoop();
+    cancelFrame();
     message("\u0413\u0440\u0430\u0444\u0438\u0447\u0435\u0441\u043A\u0438\u0439 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442 \u043F\u043E\u0442\u0435\u0440\u044F\u043D. \u041E\u0431\u043D\u043E\u0432\u0438 \u0441\u0442\u0440\u0430\u043D\u0438\u0446\u0443.");
   });
   boot();
