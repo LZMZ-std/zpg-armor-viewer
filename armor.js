@@ -4,6 +4,7 @@ import catalogData from './content/armor-catalog.json';
 import * as THREE from './assets/vendor/three/three.module.js';
 import { OrbitControls } from './assets/vendor/three/OrbitControls.js';
 import { readPsdComposite } from './psd-composite.js';
+import { listProjects, loadProject, saveProject } from './project-store.js';
 
 const panel = document.getElementById('armor-view');
 const slots = { helmet: 'Шлем', visor: 'Визор', nvg: 'ПНВ / NVG', upper: 'Верх', vest: 'Жилет', lower: 'Низ', backpack: 'Рюкзак' };
@@ -48,13 +49,20 @@ function textureSection(slot, label) {
     ${slot === 'lower'
       ? '<p class="armor-note">Модель верха и низа выбирается в блоке «Верх».</p>'
       : slot === 'visor'
-        ? '<p class="armor-note" id="armor-visor-note"></p><p class="armor-note"><a id="armor-visor-template" download hidden>Скачать штатную карту визора</a></p>'
-        : '<label class="armor-field"><span>Модель</span><select data-model disabled></select></label>'}
+        ? '<p class="armor-note" id="armor-visor-note"></p>'
+        : `<label class="armor-field"><span>Поиск модели</span><input type="search" data-model-search placeholder="Название или ID" disabled></label>
+           <label class="armor-field"><span>Модель</span><select data-model disabled></select></label>
+           <p class="armor-note" data-model-results></p>`}
+    <div class="armor-mesh-name" data-mesh-name hidden>
+      <label class="armor-field"><span>Имя модели (.p3d)</span><input data-mesh-id readonly spellcheck="false"></label>
+      <button type="button" data-copy-mesh>Копировать</button>
+    </div>
     ${slot === 'helmet' ? orientationField : ''}
     ${slot === 'nvg' ? '<label class="armor-switch" id="armor-nvg-position" hidden>Опустить ПНВ<input id="armor-nvg-down" type="checkbox" disabled></label>' : ''}
-    ${slot === 'helmet' ? '<p class="armor-note"><a id="armor-helmet-template" download>Скачать развёртку выбранного шлема</a></p><label class="armor-note"><input type="checkbox" id="armor-helmet-original"> Показать штатную текстуру</label>' : ''}
+    ${slot === 'helmet' ? '<label class="armor-note"><input type="checkbox" id="armor-helmet-original"> Показать штатную текстуру</label>' : ''}
     <div class="armor-texture-controls">
       <h3>Текстура</h3>
+      <div class="armor-texture-downloads" data-downloads hidden></div>
       <div class="armor-texture-actions">
         <button type="button" data-pick disabled>Подключить Live</button>
         <button type="button" data-reset disabled>Сбросить</button>
@@ -80,6 +88,7 @@ panel.innerHTML = `
       <div class="armor-status" role="status">Загрузка модели…</div>
       <div class="armor-viewport-label"><span aria-hidden="true"></span> 3D-просмотр</div>
       <div class="armor-camera-tools" aria-label="Инструменты просмотра">
+        <button type="button" id="armor-project-open" title="Проекты" aria-label="Проекты" disabled>${toolbarIcon('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>')}</button>
         <button type="button" id="armor-parts-toggle" title="Детали" aria-label="Детали" aria-expanded="false" aria-controls="armor-parts-panel">${toolbarIcon('<rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/>')}</button>
         <button type="button" data-camera="reset" title="Весь комплект" aria-label="Весь комплект">${toolbarIcon('<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5m-4-14 4 2.3v5.4L12 17l-4-2.3V9.3L12 7Zm-4 2.3 4 2.3 4-2.3m-4 2.3V17"/>')}</button>
         <button type="button" id="armor-quad-toggle" title="Четыре вида" aria-label="Четыре вида" aria-pressed="false">${toolbarIcon('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 3v18M3 12h18"/>')}</button>
@@ -104,6 +113,18 @@ panel.innerHTML = `
         </section>
         ${Object.entries(slots).map(([slot, label]) => textureSection(slot, label)).join('')}
       </aside>
+      <dialog id="armor-projects" class="armor-projects" aria-labelledby="armor-project-title">
+        <h2 id="armor-project-title">Проекты</h2>
+        <button class="armor-close-panel" id="armor-project-close" type="button" aria-label="Закрыть проекты">×</button>
+        <label class="armor-field"><span>Сохранённый проект</span><select id="armor-project-list"></select></label>
+        <button type="button" id="armor-project-load">Открыть</button>
+        <form id="armor-project-save">
+          <label class="armor-field"><span>Название проекта</span><input id="armor-project-name" maxlength="80" required></label>
+          <button type="submit">Сохранить</button>
+        </form>
+        <p class="armor-note" id="armor-project-status" role="status"></p>
+        <div id="armor-project-relinks"></div>
+      </dialog>
   </div>
   <footer class="armor-shortcuts" aria-label="Управление моделью">
     <span><kbd>ЛКМ</kbd> Вращение</span>
@@ -142,6 +163,7 @@ async function getTexture(url) {
   if(!url) return null;
   if(!textureCache.has(url)) textureCache.set(url, loadArmorAsset(url).then(data => textureLoader.loadAsync(data)).then(t=>{
     t.colorSpace=THREE.SRGBColorSpace; t.flipY=false; t.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
+    t.name = url.split('/').pop();
     t.wrapS=t.wrapT=THREE.RepeatWrapping; return t;
   }).catch(error=>{textureCache.delete(url);throw error;}));
   return textureCache.get(url);
@@ -166,14 +188,21 @@ function buildPart(parts, kind, maps) {
   const group=new THREE.Group();group.userData.kind=kind;
   parts.forEach((part,i)=>{
     let slot=part.slot, map;
-    if(kind==='body') map=slot==='camo1'?maps.upper:slot==='camo2'?maps.lower:maps.undersuit;
+    if (maps.defaults) {
+      map = maps.defaults[i];
+      const selections = part.selections.map(name => name.toLowerCase());
+      if (kind === 'body') {
+        if (selections.includes('camo2') || /camo2|lower|legs/.test(slot)) slot = 'camo2';
+        else if (selections.includes('camo1') || !/undersuit|bodyglove/.test(slot)) slot = 'camo1';
+      } else if (selections.some(isVisor)) slot = 'visor';
+    } else if(kind==='body') map=slot==='camo1'?maps.upper:slot==='camo2'?maps.lower:maps.undersuit;
     else map=isVisor(slot)?maps.visor:/flap|camo2/.test(slot)?maps.flaps:/illum|light/.test(slot)?maps.light:maps.main;
     const mat=new THREE.MeshStandardMaterial({map, color:map?0xffffff:kind==='body'?0x17212a:0xe6e8e9,roughness:/visor|glass/.test(slot)?.22:.64,metalness:/visor|glass/.test(slot)?.3:.08,side:THREE.DoubleSide});
     const mesh=new THREE.Mesh(kind==='body'?part.geometry.clone():part.geometry,mat);mesh.userData.slot=slot; mesh.userData.originalMap=map;
     mesh.userData.originalColor = mat.color.clone();
     mesh.castShadow=true;mesh.receiveShadow=false;
     if(kind==='body')mesh.userData.restGeometry=part.geometry;
-    if(kind==='helmet'&&/flap|camo2/.test(slot)&&!maps.flaps&&!maps.keepFlaps)mesh.visible=false;
+    if(kind==='helmet'&&/flap|camo2/.test(slot)&&!maps.defaults&&!maps.flaps&&!maps.keepFlaps)mesh.visible=false;
     mesh.userData.initialVisibility = mesh.visible;
     group.add(mesh);
   });
@@ -240,14 +269,32 @@ const modelLists = {
   vest: catalog.vests, nvg: catalog.nvgs
 };
 const modelInputs = Object.fromEntries(Object.keys(modelLists).map(slot => [slot, sections[slot].querySelector('[data-model]')]));
+const modelSearches = Object.fromEntries(Object.keys(modelLists).map(slot => [slot, sections[slot].querySelector('[data-model-search]')]));
 let selectedModels = { ...initialModels };
 const nvgDownInput = $('#armor-nvg-down');
 let nvgDown = false;
+let modelChanges = 0;
+let applyingProject = false;
 
 async function buildModel(slot, id, lowered) {
   const item = modelLists[slot].find(entry => entry.id === id);
   if (slot === 'backpack' || slot === 'vest') return buildAccessory(slot, item);
   if (slot === 'nvg') return buildAccessory(slot, item, lowered ? item?.model : item?.offModel ?? item?.model);
+  if (item.useMeshMaterials) {
+    const parts = await geometry(item.model);
+    const defaults = await Promise.all(parts.map(part => getTexture(part.defaultMap)));
+    const group = buildPart(parts, slot === 'upper' ? 'body' : 'helmet', { defaults });
+    group.userData.uvLayout = item.model;
+    if (slot === 'helmet') {
+      const main = group.children.find(mesh => !/visor|glass|flap|camo2|illum|light/i.test(mesh.userData.slot));
+      const visor = group.children.find(mesh => isVisor(mesh.userData.slot));
+      group.userData.primaryMap = main?.material.map;
+      group.userData.template = main?.material.map?.image;
+      group.userData.hasVisor = Boolean(visor);
+      group.userData.visorTemplate = visor?.material.map?.image;
+    }
+    return group;
+  }
   if (slot === 'upper') {
     const [parts, upper, lower, undersuit] = await Promise.all([
       geometry(item.model || catalog.bodyModel), getTexture(item.upper), getTexture(item.lower), getTexture(catalog.undersuit)
@@ -272,10 +319,8 @@ async function buildModel(slot, id, lowered) {
   group.userData.uvLayout = item.model;
   group.userData.primaryMap = main;
   group.userData.template = main?.image;
-  group.userData.templateName = mainUrl?.split('/').pop();
   group.userData.hasVisor = parts.some(part => isVisor(part.slot));
   group.userData.visorTemplate = visor?.image;
-  group.userData.visorTemplateName = visorUrl?.split('/').pop();
   return group;
 }
 
@@ -285,15 +330,31 @@ function updateSlotControls() {
     section.querySelector('[data-focus]').disabled = !ready || !partFor(slot);
     section.querySelector('[data-isolate]').disabled = !ready || !partFor(slot);
     section.querySelector('[data-reset]').disabled = !ready || (!customTextures.has(slot) && !liveTextures.has(slot));
+    const meshId = meshIdFor(slot);
+    const nameField = section.querySelector('[data-mesh-name]');
+    const nameInput = nameField.querySelector('[data-mesh-id]');
+    if (nameInput.value !== meshId) nameInput.value = meshId;
+    nameField.hidden = !meshId;
   }
   $('#armor-visor-note').textContent = helmet?.userData.hasVisor
     ? 'Подключи отдельную текстуру визора.'
     : 'У выбранного шлема визор входит в общую текстуру. Подключи файл в разделе «Шлем».';
 }
 
+function meshIdFor(slot) {
+  const modelSlot = slot === 'lower' ? 'upper' : slot === 'visor' ? 'helmet' : slot;
+  const model = modelLists[modelSlot].find(item => item.id === selectedModels[modelSlot]);
+  if (!model || !partFor(slot)) return '';
+  if (slot === 'nvg' && !nvgDown && model.offModel) return model.offModel;
+  return model.model || (modelSlot === 'upper' ? catalog.bodyModel : '');
+}
+
 async function changeModel(slot, id, lowered = false) {
   const input = modelInputs[slot];
+  modelChanges++;
+  $('#armor-project-open').disabled = true;
   input.disabled = true;
+  modelSearches[slot].disabled = true;
   if (slot === 'nvg') nvgDownInput.disabled = true;
   try {
     const next = await buildModel(slot, id, lowered);
@@ -330,34 +391,27 @@ async function changeModel(slot, id, lowered = false) {
     if (next) scene.add(next);
     if (!partFor(isolatedSlot)) isolatedSlot = null;
     updateIsolation();
-    if (slot === 'helmet') {
-      const link = $('#armor-helmet-template');
-      link.hidden = !next.userData.template;
-      if (next.userData.template) {
-        link.href = next.userData.template.src;
-        link.download = next.userData.templateName;
-      }
-      const visorLink = $('#armor-visor-template');
-      visorLink.hidden = !next.userData.hasVisor || !next.userData.visorTemplate;
-      if (!visorLink.hidden) {
-        visorLink.href = next.userData.visorTemplate.src;
-        visorLink.download = next.userData.visorTemplateName;
-      }
-    }
+    affectedSlots.forEach(updateTextureDownloads);
     if (slot === 'upper' || slot === 'vest') applyPose();
     for (const affected of affectedSlots) {
       const texture = customTextures.get(affected);
       if (texture) setSlotTexture(affected, texture);
     }
-    if (ready) cameraView(next ? slot : 'reset');
+    if (ready && !applyingProject) cameraView(next ? slot : 'reset');
     message('');
+    return true;
   } catch (error) {
     input.value = selectedModels[slot];
     if (!ready) throw error;
     message('Не удалось открыть выбранную модель.');
     console.error(error);
+    return false;
   } finally {
+    modelChanges--;
+    $('#armor-project-open').disabled = !ready || modelChanges > 0;
     input.disabled = !ready;
+    modelSearches[slot].disabled = !ready;
+    filterModels(slot);
     if (slot === 'nvg') {
       const item = modelLists.nvg.find(entry => entry.id === selectedModels.nvg);
       const hasPositions = Boolean(item?.offModel && item.model !== item.offModel);
@@ -369,12 +423,29 @@ async function changeModel(slot, id, lowered = false) {
   }
 }
 
+function filterModels(slot) {
+  const input = modelInputs[slot];
+  const terms = modelSearches[slot].value.toLowerCase().trim().split(/\s+/).filter(Boolean);
+  const matches = modelLists[slot].filter(item => {
+    const label = `${item.name} ${item.id} ${item.model}`.toLowerCase();
+    return terms.every(term => label.includes(term));
+  });
+  const selected = selectedModels[slot];
+  const options = matches.map(item => new Option(item.name, item.id));
+  const current = modelLists[slot].find(item => item.id === selected);
+  if (current && !matches.includes(current)) options.unshift(new Option(current.name + ' (выбрано)', current.id));
+  const emptyLabel = { backpack: 'Без рюкзака', vest: 'Без жилета', nvg: 'Без ПНВ' }[slot];
+  if (emptyLabel) options.unshift(new Option(emptyLabel, ''));
+  input.replaceChildren(...options);
+  input.value = selected;
+  sections[slot].querySelector('[data-model-results]').textContent = !terms.length ? ''
+    : matches.length ? 'Найдено: ' + matches.length : 'Совпадений нет.';
+}
+
 async function loadOutfit() {
   for (const [slot, input] of Object.entries(modelInputs)) {
-    input.replaceChildren(...modelLists[slot].map(item => new Option(item.name, item.id)));
-    const emptyLabel = { backpack: 'Без рюкзака', vest: 'Без жилета', nvg: 'Без ПНВ' }[slot];
-    if (emptyLabel) input.prepend(new Option(emptyLabel, ''));
-    input.value = selectedModels[slot];
+    filterModels(slot);
+    modelSearches[slot].addEventListener('input', () => filterModels(slot));
     input.addEventListener('change', () => changeModel(slot, input.value));
   }
   await Promise.all(Object.keys(modelInputs).map(slot => changeModel(slot, selectedModels[slot])));
@@ -559,7 +630,8 @@ async function boot() {
     await loadOutfit();
     ready = true;
     status.hidden = true;
-    for (const input of Object.values(modelInputs)) input.disabled = false;
+    for (const input of [...Object.values(modelInputs), ...Object.values(modelSearches)]) input.disabled = false;
+    $('#armor-project-open').disabled = false;
     updateSlotControls();
     render();
   } catch (error) {
@@ -807,6 +879,45 @@ function partFor(slot) {
   return slot === 'upper' || slot === 'lower' ? body : null;
 }
 
+function updateTextureDownloads(slot) {
+  const container = sections[slot].querySelector('[data-downloads]');
+  const maps = new Set();
+  const part = partFor(slot);
+  for (const mesh of part?.children ?? []) {
+    if (!mesh.isMesh || mesh.userData.initialVisibility === false) continue;
+    const materialSlot = mesh.userData.slot;
+    if (slot === 'upper' && materialSlot !== 'camo1') continue;
+    if (slot === 'lower' && materialSlot !== 'camo2') continue;
+    if (slot === 'helmet' && isVisor(materialSlot)) continue;
+    if (slot === 'visor' && !isVisor(materialSlot)) continue;
+    const map = mesh.userData.originalMap;
+    if (map?.image?.src) maps.add(map);
+  }
+  container.replaceChildren();
+  container.hidden = !part;
+  if (!part) return;
+  if (!maps.size) {
+    const note = document.createElement('p');
+    note.className = 'armor-note';
+    note.textContent = 'У этой детали нет штатной карты.';
+    container.append(note);
+    return;
+  }
+  const names = new Set();
+  for (const map of maps) {
+    const link = document.createElement('a');
+    const name = map.name || 'texture.webp';
+    let filename = name;
+    for (let index = 2; names.has(filename.toLowerCase()); index++) filename = `${index}-${name}`;
+    names.add(filename.toLowerCase());
+    link.href = map.image.src;
+    link.download = filename;
+    link.textContent = maps.size === 1 ? 'Скачать текстуру модели' : 'Скачать ' + filename;
+    link.title = filename;
+    container.append(link);
+  }
+}
+
 function setSlotTexture(slot, texture) {
   if (slot === 'helmet' && $('#armor-helmet-original').checked) texture = null;
   partFor(slot)?.traverse(mesh => {
@@ -888,6 +999,19 @@ const liveTextures = watchTextures({
   onChange: updateSlotControls
 });
 for (const [slot, section] of Object.entries(sections)) {
+  const copyMesh = section.querySelector('[data-copy-mesh]');
+  const meshId = section.querySelector('[data-mesh-id]');
+  copyMesh.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(meshId.value);
+      copyMesh.textContent = 'Скопировано';
+    } catch {
+      meshId.focus();
+      meshId.select();
+      copyMesh.textContent = 'Нажми Ctrl+C';
+    }
+    setTimeout(() => { copyMesh.textContent = 'Копировать'; }, 1700);
+  });
   section.querySelector('[data-reset]').addEventListener('click', () => {
     liveTextures.stop(slot);
     setSlotTexture(slot, null);
@@ -897,6 +1021,170 @@ for (const [slot, section] of Object.entries(sections)) {
     render();
   });
 }
+
+const projectPanel = $('#armor-projects');
+const projectList = $('#armor-project-list');
+const projectName = $('#armor-project-name');
+const projectStatus = $('#armor-project-status');
+const projectRelinks = $('#armor-project-relinks');
+const projectLoad = $('#armor-project-load');
+
+function captureView(viewCamera, target) {
+  return { position: viewCamera.position.toArray(), target: target.toArray(), zoom: viewCamera.zoom };
+}
+
+function restoreView(viewCamera, target, saved) {
+  viewCamera.position.fromArray(saved.position);
+  target.fromArray(saved.target);
+  viewCamera.zoom = saved.zoom;
+  viewCamera.lookAt(target);
+  viewCamera.updateProjectionMatrix();
+}
+
+function captureProject(name) {
+  return {
+    name, version: 1, models: { ...selectedModels }, nvgDown,
+    light: $('#armor-light-temperature').value,
+    helmetOrientation: $('#armor-helmet-orientation').value,
+    textureFiles: liveTextures.snapshot(),
+    camera: captureView(camera, controls.target),
+    quadMode, quadInitialized,
+    quadViews: quadViews.map(view => ({
+      direction: view.direction,
+      ...captureView(view.camera, view.target)
+    }))
+  };
+}
+
+async function refreshProjectList(selection) {
+  const names = await listProjects();
+  names.sort((left, right) => left.localeCompare(right, 'ru'));
+  projectList.replaceChildren(...names.map(name => new Option(name, name)));
+  if (!names.length) projectList.append(new Option('Проектов пока нет', ''));
+  if (selection && names.includes(selection)) projectList.value = selection;
+}
+
+function setProjectBusy(busy) {
+  for (const input of projectPanel.querySelectorAll('button, select, input')) input.disabled = busy;
+  projectLoad.disabled = busy || !projectList.value;
+}
+
+async function restoreProject(project) {
+  if (!project || project.version !== 1) throw new Error('Проект не найден или сохранён в другой версии.');
+  applyingProject = true;
+  const unavailable = [];
+  try {
+    for (const slot of Object.keys(slots)) {
+      liveTextures.stop(slot);
+      setSlotTexture(slot, null);
+      customTextures.get(slot)?.dispose();
+    }
+    customTextures.clear();
+    isolatedSlot = null;
+    updateIsolation();
+    const loaded = await Promise.all(Object.entries(modelLists).map(async ([slot, models]) => {
+      const id = project.models[slot];
+      const valid = models.some(model => model.id === id) || (id === '' && initialModels[slot] !== undefined
+        && ['vest', 'backpack', 'nvg'].includes(slot));
+      if (!valid) return false;
+      modelSearches[slot].value = '';
+      return changeModel(slot, id, slot === 'nvg' && project.nvgDown);
+    }));
+    $('#armor-light-temperature').value = project.light;
+    setLighting();
+    $('#armor-helmet-orientation').value = project.helmetOrientation;
+    $('#armor-helmet-original').checked = false;
+    controls.enableDamping = false;
+    controls.update();
+    restoreView(camera, controls.target, project.camera);
+    controls.update();
+    controls.enableDamping = true;
+    panel.querySelectorAll('[data-quad-view]').forEach(select => {
+      const index = Number(select.dataset.quadView);
+      const saved = project.quadViews[index];
+      select.value = saved.direction;
+      select.dispatchEvent(new Event('change'));
+      if (project.quadInitialized) restoreView(quadViews[index].camera, quadViews[index].target, saved);
+    });
+    quadInitialized = project.quadInitialized;
+    setQuadMode(project.quadMode);
+    hidePartSettings();
+    for (const [slot, handle] of Object.entries(project.textureFiles)) {
+      const modelSlot = slot === 'visor' ? 'helmet' : slot === 'lower' ? 'upper' : slot;
+      if (!partFor(slot) || selectedModels[modelSlot] !== project.models[modelSlot]) continue;
+      if (!await liveTextures.restore(slot, handle)) unavailable.push([slot, handle.name]);
+    }
+    updateSlotControls();
+    return { unavailable, modelsMissing: loaded.includes(false) };
+  } finally {
+    applyingProject = false;
+    render();
+  }
+}
+
+$('#armor-project-open').addEventListener('click', async () => {
+  projectRelinks.replaceChildren();
+  projectStatus.textContent = '';
+  projectPanel.showModal();
+  setProjectBusy(true);
+  try {
+    await refreshProjectList(projectName.value);
+  } catch {
+    projectStatus.textContent = 'Хранилище проектов недоступно в этом окне.';
+  } finally {
+    setProjectBusy(false);
+  }
+});
+$('#armor-project-close').addEventListener('click', () => projectPanel.close());
+projectList.addEventListener('change', () => { projectLoad.disabled = !projectList.value; });
+projectPanel.addEventListener('cancel', event => {
+  if ($('#armor-project-close').disabled) event.preventDefault();
+});
+$('#armor-project-save').addEventListener('submit', async event => {
+  event.preventDefault();
+  const name = projectName.value.trim();
+  if (!name) return;
+  setProjectBusy(true);
+  try {
+    await saveProject(captureProject(name));
+    await refreshProjectList(name);
+    projectStatus.textContent = 'Сохранено: ' + name;
+  } catch {
+    projectStatus.textContent = 'Не удалось сохранить проект. Проверь доступ к хранилищу браузера.';
+  } finally {
+    setProjectBusy(false);
+  }
+});
+projectLoad.addEventListener('click', async () => {
+  const name = projectList.value;
+  projectRelinks.replaceChildren();
+  setProjectBusy(true);
+  projectStatus.textContent = 'Открываю…';
+  try {
+    const { unavailable, modelsMissing } = await restoreProject(await loadProject(name));
+    projectName.value = name;
+    const notes = ['Открыт: ' + name];
+    if (modelsMissing) notes.push('Часть моделей недоступна.');
+    if (unavailable.length) notes.push('Подключи недоступные файлы заново и сохрани проект.');
+    projectStatus.textContent = notes.join(' ');
+    for (const [slot, filename] of unavailable) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = slots[slot] + ' · ' + filename;
+      button.addEventListener('click', () => {
+        projectPanel.close();
+        showPartSettings(slot, true);
+        sections[slot].querySelector('[data-pick]').click();
+      });
+      projectRelinks.append(button);
+    }
+  } catch (error) {
+    projectStatus.textContent = error.message || 'Не удалось открыть проект.';
+  } finally {
+    setProjectBusy(false);
+  }
+});
+
 canvas.addEventListener('keydown', event => {
   if (!controls) return;
   if (quadMode) {

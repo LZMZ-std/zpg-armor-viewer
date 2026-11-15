@@ -37,6 +37,15 @@
       report(slot, watch.handle.name + updated + (detail ? " \xB7 " + detail : ""), state);
     }
     async function refresh(slot, watch) {
+      if (watch.refreshing) return watch.refreshing;
+      watch.refreshing = readTexture(slot, watch);
+      try {
+        return await watch.refreshing;
+      } finally {
+        watch.refreshing = null;
+      }
+    }
+    async function readTexture(slot, watch) {
       try {
         const file = await watch.handle.getFile();
         if (watches.get(slot) !== watch) return;
@@ -54,7 +63,7 @@
         }
       } catch (error) {
         if (watches.get(slot) === watch) {
-          const detail = error.name === "NotAllowedError" ? "\u0414\u043E\u0441\u0442\u0443\u043F \u0437\u0430\u043A\u0440\u044B\u0442. \u041F\u043E\u0434\u043A\u043B\u044E\u0447\u0438 \u0444\u0430\u0439\u043B \u0437\u0430\u043D\u043E\u0432\u043E." : error.name === "NotFoundError" || error.name === "NotReadableError" ? "\u0424\u0430\u0439\u043B \u0432\u0440\u0435\u043C\u0435\u043D\u043D\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u0435\u043D." : error.message || "\u041E\u0448\u0438\u0431\u043A\u0430 \u0447\u0442\u0435\u043D\u0438\u044F \u0444\u0430\u0439\u043B\u0430.";
+          const detail = error.name === "NotAllowedError" ? "\u0414\u043E\u0441\u0442\u0443\u043F \u0437\u0430\u043A\u0440\u044B\u0442. \u041F\u043E\u0434\u043A\u043B\u044E\u0447\u0438 \u0444\u0430\u0439\u043B \u0437\u0430\u043D\u043E\u0432\u043E." : error.name === "NotFoundError" || error.name === "NotReadableError" ? "\u0424\u0430\u0439\u043B \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u0435\u043D. \u0415\u0441\u043B\u0438 \u043E\u043D \u043F\u0435\u0440\u0435\u043C\u0435\u0449\u0451\u043D, \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0438 \u0435\u0433\u043E \u0437\u0430\u043D\u043E\u0432\u043E." : error.message || "\u041E\u0448\u0438\u0431\u043A\u0430 \u0447\u0442\u0435\u043D\u0438\u044F \u0444\u0430\u0439\u043B\u0430.";
           reportWatch(slot, watch, "error", detail);
         }
       }
@@ -105,6 +114,25 @@
     setInterval(poll, 750);
     window.addEventListener("focus", poll);
     return {
+      snapshot() {
+        return Object.fromEntries(Array.from(watches, ([slot, watch]) => [slot, watch.handle]));
+      },
+      async restore(slot, handle) {
+        const watch = { handle };
+        watches.set(slot, watch);
+        onChange();
+        try {
+          if (await handle.queryPermission({ mode: "read" }) !== "granted") {
+            reportWatch(slot, watch, "error", "\u041F\u043E\u0434\u043A\u043B\u044E\u0447\u0438 \u0444\u0430\u0439\u043B \u0437\u0430\u043D\u043E\u0432\u043E.");
+            return false;
+          }
+          await refresh(slot, watch);
+          return watch.version !== void 0;
+        } catch {
+          reportWatch(slot, watch, "error", "\u0424\u0430\u0439\u043B \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u0435\u043D. \u041F\u043E\u0434\u043A\u043B\u044E\u0447\u0438 \u0435\u0433\u043E \u0437\u0430\u043D\u043E\u0432\u043E.");
+          return false;
+        }
+      },
       has(slot) {
         return watches.has(slot);
       },
@@ -174,6 +202,60 @@
         upper: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/uniforms/phase2/data/camo1_co.webp",
         lower: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/uniforms/phase2/data/camo2_co.webp",
         model: "ls_gar_phase2_uniform"
+      },
+      {
+        id: "ls_uniform_jediCommander",
+        name: "Uniform Jedi Commander \xB7 Legion",
+        pack: "legion",
+        model: "ls_uniform_jediCommander",
+        upper: null,
+        lower: null,
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_uniform_clone_phase2",
+        name: "Uniform Clone Phase2 \xB7 Legion",
+        pack: "legion",
+        model: "ls_uniform_clone_phase2",
+        upper: null,
+        lower: null,
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_uniform_clone_phase2_mc",
+        name: "Uniform Clone Phase2 Mc \xB7 Legion",
+        pack: "legion",
+        model: "ls_uniform_clone_phase2_mc",
+        upper: null,
+        lower: null,
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_uniform_clone_scout",
+        name: "Uniform Clone Scout \xB7 Legion",
+        pack: "legion",
+        model: "ls_uniform_clone_scout",
+        upper: null,
+        lower: null,
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_uniform_clone_commando",
+        name: "Clone Commando Katarn I Armor \xB7 Legion",
+        pack: "legion",
+        model: "ls_uniform_clone_commando",
+        upper: null,
+        lower: null,
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_gar_phase2Insulated_uniform",
+        name: "Insulated Clone Trooper \xB7 Legion",
+        pack: "legion",
+        model: "ls_gar_phase2Insulated_uniform",
+        upper: null,
+        lower: null,
+        useMeshMaterials: true
       }
     ],
     helmets: [
@@ -600,6 +682,195 @@
           "visor",
           "illum"
         ]
+      },
+      {
+        id: "ls_helmet_clone_airborne",
+        name: "Helmet Clone Airborne \xB7 Legion",
+        pack: "legion",
+        model: "ls_helmet_clone_airborne",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_helmet_clone_arc",
+        name: "Helmet Clone Arc \xB7 Legion",
+        pack: "legion",
+        model: "ls_helmet_clone_arc",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_helmet_clone_arf",
+        name: "Helmet Clone Arf \xB7 Legion",
+        pack: "legion",
+        model: "ls_helmet_clone_arf",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_helmet_clone_atrtDriver",
+        name: "Helmet Clone Atrt Driver \xB7 Legion",
+        pack: "legion",
+        model: "ls_helmet_clone_atrtDriver",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_helmet_clone_p1",
+        name: "Helmet Clone P1 \xB7 Legion",
+        pack: "legion",
+        model: "ls_helmet_clone_p1",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_helmet_clone_p2",
+        name: "Helmet Clone P2 \xB7 Legion",
+        pack: "legion",
+        model: "ls_helmet_clone_p2",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_helmet_clone_pilotPhase2",
+        name: "Helmet Clone Pilot Phase2 \xB7 Legion",
+        pack: "legion",
+        model: "ls_helmet_clone_pilotPhase2",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_helmet_clone_phase3Pilot",
+        name: "Helmet Clone Phase3 Pilot \xB7 Legion",
+        pack: "legion",
+        model: "ls_helmet_clone_phase3Pilot",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_helmet_clone_scout",
+        name: "Helmet Clone Scout \xB7 Legion",
+        pack: "legion",
+        model: "ls_helmet_clone_scout",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_helmet_clone_atrt",
+        name: "Clone AT-RT Driver Helmet \xB7 Legion",
+        pack: "legion",
+        model: "ls_helmet_clone_atrt",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_helmet_clone_cadet",
+        name: "Clone Cadet Helmet \xB7 Legion",
+        pack: "legion",
+        model: "ls_helmet_clone_cadet",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_helmet_clone_commando",
+        name: "Clone Commando Katarn I Helmet \xB7 Legion",
+        pack: "legion",
+        model: "ls_helmet_clone_commando",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_sob_crosshair_helmet",
+        name: "Clone Commando Crosshair's Helmet [Uncolored] \xB7 Legion",
+        pack: "legion",
+        model: "ls_sob_crosshair_helmet",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_sob_hunter_helmet",
+        name: "Clone Commando Hunter's Helmet [Uncolored] \xB7 Legion",
+        pack: "legion",
+        model: "ls_sob_hunter_helmet",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_sob_fordo_helmet",
+        name: "Clone Modified BARC Helmet \xB7 Legion",
+        pack: "legion",
+        model: "ls_sob_fordo_helmet",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_cloneHelmet_phase1_pilot",
+        name: "Clone Pilot P1 Helmet \xB7 Legion",
+        pack: "legion",
+        model: "ls_cloneHelmet_phase1_pilot",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_sob_phase1SpecOp_helmet",
+        name: "Clone Special Activities Phase 1 Helmet \xB7 Legion",
+        pack: "legion",
+        model: "ls_sob_phase1SpecOp_helmet",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_gar_phase2Insulated_helmet",
+        name: "Clone Trooper Insulated Phase 2 Helmet \xB7 Legion",
+        pack: "legion",
+        model: "ls_gar_phase2Insulated_helmet",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_gar_scout_helmet",
+        name: "Clone Scout Helmet \xB7 Legion",
+        pack: "legion",
+        model: "ls_gar_scout_helmet",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_sob_tech_helmet",
+        name: "Clone Commando Tech's Helmet [Uncolored] \xB7 Legion",
+        pack: "legion",
+        model: "ls_sob_tech_helmet",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_sob_wrecker_helmet",
+        name: "Clone Commando Wrecker's Helmet [Uncolored] \xB7 Legion",
+        pack: "legion",
+        model: "ls_sob_wrecker_helmet",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
       }
     ],
     vests: [
@@ -1820,6 +2091,249 @@
           "camo1",
           "camo2"
         ]
+      },
+      {
+        id: "ls_vest_clone_arc",
+        name: "Vest Clone Arc \xB7 Legion",
+        pack: "legion",
+        model: "ls_vest_clone_arc",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_cloneVest_gunner",
+        name: "Clone Vest Gunner \xB7 Legion",
+        pack: "legion",
+        model: "ls_cloneVest_gunner",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_vest_clone_kama",
+        name: "Vest Clone Kama \xB7 Legion",
+        pack: "legion",
+        model: "ls_vest_clone_kama",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_vest_clone_lieutenant",
+        name: "Vest Clone Lieutenant \xB7 Legion",
+        pack: "legion",
+        model: "ls_vest_clone_lieutenant",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_vest_clone_officer",
+        name: "Vest Clone Officer \xB7 Legion",
+        pack: "legion",
+        model: "ls_vest_clone_officer",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_vest_clone_recon",
+        name: "Vest Clone Recon \xB7 Legion",
+        pack: "legion",
+        model: "ls_vest_clone_recon",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_vest_clone_scout",
+        name: "Vest Clone Scout \xB7 Legion",
+        pack: "legion",
+        model: "ls_vest_clone_scout",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_gar_airborneLight_vest",
+        name: "Clone Airborne Light Vest \xB7 Legion",
+        pack: "legion",
+        model: "ls_gar_airborneLight_vest",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_gar_arf_vest",
+        name: "Clone ARF Vest \xB7 Legion",
+        pack: "legion",
+        model: "ls_gar_arf_vest",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_gar_assault_vest",
+        name: "Clone Assault Vest \xB7 Legion",
+        pack: "legion",
+        model: "ls_gar_assault_vest",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_vest_clone_commando_eod",
+        name: "Clone Commando Katarn I EOD Vest \xB7 Legion",
+        pack: "legion",
+        model: "ls_vest_clone_commando_eod",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_vest_clone_commando_sl",
+        name: "Clone Commando Katarn I Squad Leader Pauldron \xB7 Legion",
+        pack: "legion",
+        model: "ls_vest_clone_commando_sl",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_vest_clone_commando_sniper",
+        name: "Clone Commando Katarn I Sniper Vest \xB7 Legion",
+        pack: "legion",
+        model: "ls_vest_clone_commando_sniper",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_vest_clone_commando_tech",
+        name: "Clone Commando Katarn I Tech Vest \xB7 Legion",
+        pack: "legion",
+        model: "ls_vest_clone_commando_tech",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_gar_engineer_vest",
+        name: "Clone Engineer Vest \xB7 Legion",
+        pack: "legion",
+        model: "ls_gar_engineer_vest",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_gar_forceReconCommander_vest",
+        name: "Clone Force Recon Commander Vest \xB7 Legion",
+        pack: "legion",
+        model: "ls_gar_forceReconCommander_vest",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_gar_grenadier_vest",
+        name: "Clone Grenadier Vest \xB7 Legion",
+        pack: "legion",
+        model: "ls_gar_grenadier_vest",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_gar_lanceCaptain_vest",
+        name: "Lance Captain Vest \xB7 Legion",
+        pack: "legion",
+        model: "ls_gar_lanceCaptain_vest",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_gar_lanceCommander_vest",
+        name: "Lance Commander Vest \xB7 Legion",
+        pack: "legion",
+        model: "ls_gar_lanceCommander_vest",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_gar_marine_vest",
+        name: "Clone Marine Vest \xB7 Legion",
+        pack: "legion",
+        model: "ls_gar_marine_vest",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_gar_medic_vest",
+        name: "Clone Medic Vest \xB7 Legion",
+        pack: "legion",
+        model: "ls_gar_medic_vest",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_gar_kamaAntenna_vest",
+        name: "Clone Trooper Kama (Antenna) \xB7 Legion",
+        pack: "legion",
+        model: "ls_gar_kamaAntenna_vest",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_gar_lieutenant_vest",
+        name: "Clone Lieutenant Vest \xB7 Legion",
+        pack: "legion",
+        model: "ls_gar_lieutenant_vest",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_gar_rebreather_vest",
+        name: "Clone Lightweight Rebreather \xB7 Legion",
+        pack: "legion",
+        model: "ls_gar_rebreather_vest",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_gar_reconSurvival_vest",
+        name: "Clone Recon Survival Vest \xB7 Legion",
+        pack: "legion",
+        model: "ls_gar_reconSurvival_vest",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_gar_specialist_vest",
+        name: "Clone Specialist Vest \xB7 Legion",
+        pack: "legion",
+        model: "ls_gar_specialist_vest",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_gar_tacticalCommander_vest",
+        name: "Clone Tactical Commander Vest \xB7 Legion",
+        pack: "legion",
+        model: "ls_gar_tacticalCommander_vest",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
       }
     ],
     backpacks: [
@@ -2437,6 +2951,204 @@
         slots: [
           "camo1"
         ]
+      },
+      {
+        id: "ls_backpack_clone_arc",
+        name: "Backpack Clone Arc \xB7 Legion",
+        pack: "legion",
+        model: "ls_backpack_clone_arc",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_backpack_clone_beltbag",
+        name: "Backpack Clone Beltbag \xB7 Legion",
+        pack: "legion",
+        model: "ls_backpack_clone_beltbag",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_backpack_clone_cdv",
+        name: "Backpack Clone Cdv \xB7 Legion",
+        pack: "legion",
+        model: "ls_backpack_clone_cdv",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_backpack_clone_jt12",
+        name: "Backpack Clone Jt12 \xB7 Legion",
+        pack: "legion",
+        model: "ls_backpack_clone_jt12",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_backpack_clone_miniLR",
+        name: "Backpack Clone Mini Lr \xB7 Legion",
+        pack: "legion",
+        model: "ls_backpack_clone_miniLR",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_backpack_clone_MiniLR_attachment",
+        name: "Backpack Clone Mini Lr Attachment \xB7 Legion",
+        pack: "legion",
+        model: "ls_backpack_clone_MiniLR_attachment",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_backpack_clone_standard",
+        name: "Backpack Clone Standard \xB7 Legion",
+        pack: "legion",
+        model: "ls_backpack_clone_standard",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_backpack_clone_commando",
+        name: "Clone Commando Katarn II Backpack \xB7 Legion",
+        pack: "legion",
+        model: "ls_backpack_clone_commando",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_backpack_clone_commando_eod",
+        name: "Clone Commando Katarn II EOD Backpack \xB7 Legion",
+        pack: "legion",
+        model: "ls_backpack_clone_commando_eod",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_backpack_clone_commando_rto",
+        name: "Clone Commando Katarn II RTO Backpack \xB7 Legion",
+        pack: "legion",
+        model: "ls_backpack_clone_commando_rto",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_backpack_clone_commando_tech",
+        name: "Clone Commando Katarn II Tech Backpack \xB7 Legion",
+        pack: "legion",
+        model: "ls_backpack_clone_commando_tech",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_gar_heavy_backpack",
+        name: "Republic Trooper Heavy Backpack \xB7 Legion",
+        pack: "legion",
+        model: "ls_gar_heavy_backpack",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_gar_heavyMedic_backpack",
+        name: "Republic Trooper Heavy Medic Backpack \xB7 Legion",
+        pack: "legion",
+        model: "ls_gar_heavyMedic_backpack",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_backpack_clone_marine",
+        name: "Backpack Clone Marine \xB7 Legion",
+        pack: "legion",
+        model: "ls_backpack_clone_marine",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_gar_medium_backpack",
+        name: "Republic Trooper Medium Backpack \xB7 Legion",
+        pack: "legion",
+        model: "ls_gar_medium_backpack",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_gar_mediumRadio_backpack",
+        name: "Republic Trooper Expanded Storage Long-range Comms \xB7 Legion",
+        pack: "legion",
+        model: "ls_gar_mediumRadio_backpack",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_mynock_backpack",
+        name: "CDV-24 'Mynock' Glidepack \xB7 Legion",
+        pack: "legion",
+        model: "ls_mynock_backpack",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_gar_medic_backpack",
+        name: "Republic Trooper Medic Backpack \xB7 Legion",
+        pack: "legion",
+        model: "ls_gar_medic_backpack",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_gar_radio_backpack",
+        name: "Republic Trooper Long-range Comms \xB7 Legion",
+        pack: "legion",
+        model: "ls_gar_radio_backpack",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_gar_rocket_backpack",
+        name: "Republic Trooper Rocket Backpack \xB7 Legion",
+        pack: "legion",
+        model: "ls_gar_rocket_backpack",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_gar_standard_backpack",
+        name: "Republic Trooper Backpack \xB7 Legion",
+        pack: "legion",
+        model: "ls_gar_standard_backpack",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_backpack_clone_survival",
+        name: "Republic Survival Pack \xB7 Legion",
+        pack: "legion",
+        model: "ls_backpack_clone_survival",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
       }
     ],
     nvgs: [
@@ -2447,7 +3159,7 @@
         model: "lsd_gar_rangefinder_nvg_on",
         offModel: "lsd_gar_rangefinder_nvg_off",
         maps: [
-          "./assets/armor/textures/ls/core/addons/data/textures/hologram/blueHologram_ca.webp"
+          "./assets/armor/textures/ls/core/addons/characters_clone_legacy/equipment/nvgs/common/camo1_co.webp"
         ],
         slots: [
           "camo1"
@@ -2460,7 +3172,7 @@
         model: "lsd_gar_rangefinder_nvg_on",
         offModel: "lsd_gar_rangefinder_nvg_off",
         maps: [
-          "./assets/armor/textures/ls/core/addons/data/textures/hologram/blueHologram_ca.webp"
+          "./assets/armor/textures/ls/core/addons/characters_clone_legacy/equipment/nvgs/common/camo1_co.webp"
         ],
         slots: [
           "camo1"
@@ -2757,6 +3469,316 @@
           "camo1",
           "camo2"
         ]
+      },
+      {
+        id: "ls_facewear_clone_arf",
+        name: "Facewear Clone Arf \xB7 Legion",
+        pack: "legion",
+        model: "ls_facewear_clone_arf",
+        offModel: "ls_facewear_clone_arf",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_binoculars_clone",
+        name: "Binoculars Clone \xB7 Legion",
+        pack: "legion",
+        model: "ls_binoculars_clone",
+        offModel: "ls_binoculars_clone",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_binoculars_cloneCommander",
+        name: "Binoculars Clone Commander \xB7 Legion",
+        pack: "legion",
+        model: "ls_binoculars_cloneCommander",
+        offModel: "ls_binoculars_cloneCommander",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_binoculars_cloneCommander_optic",
+        name: "Binoculars Clone Commander Optic \xB7 Legion",
+        pack: "legion",
+        model: "ls_binoculars_cloneCommander_optic",
+        offModel: "ls_binoculars_cloneCommander_optic",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_clone_phase1Headlamp",
+        name: "Clone Phase1 Headlamp \xB7 Legion",
+        pack: "legion",
+        model: "ls_clone_phase1Headlamp",
+        offModel: "ls_clone_phase1Headlamp",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_clone_phase1Headlamp_double",
+        name: "Clone Phase 1 Headlamp (Double) \xB7 Legion",
+        pack: "legion",
+        model: "ls_clone_phase1Headlamp_double",
+        offModel: "ls_clone_phase1Headlamp_double",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_clone_phase1Headlamp_left",
+        name: "Clone Phase 1 Headlamp (Left) \xB7 Legion",
+        pack: "legion",
+        model: "ls_clone_phase1Headlamp_left",
+        offModel: "ls_clone_phase1Headlamp_left",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_clone_phase2Headlamp",
+        name: "Clone Phase2 Headlamp \xB7 Legion",
+        pack: "legion",
+        model: "ls_clone_phase2Headlamp",
+        offModel: "ls_clone_phase2Headlamp",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_clone_phase2Headlamp_double",
+        name: "Clone Phase 2 Headlamp (Double) \xB7 Legion",
+        pack: "legion",
+        model: "ls_clone_phase2Headlamp_double",
+        offModel: "ls_clone_phase2Headlamp_double",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_clone_phase2Headlamp_right",
+        name: "Clone Phase 2 Headlamp (Right) \xB7 Legion",
+        pack: "legion",
+        model: "ls_clone_phase2Headlamp_right",
+        offModel: "ls_clone_phase2Headlamp_right",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_nvg_clone_commander",
+        name: "Nvg Clone Commander \xB7 Legion",
+        pack: "legion",
+        model: "ls_nvg_clone_commander",
+        offModel: "ls_nvg_clone_commander",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_nvg_arcPilot_module",
+        name: "Nvg Arc Pilot Module \xB7 Legion",
+        pack: "legion",
+        model: "ls_nvg_arcPilot_module",
+        offModel: "ls_nvg_arcPilot_module",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_nvg_imperialPilot_module",
+        name: "Nvg Imperial Pilot Module \xB7 Legion",
+        pack: "legion",
+        model: "ls_nvg_imperialPilot_module",
+        offModel: "ls_nvg_imperialPilot_module",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_nvg_vwingPilot_module",
+        name: "Nvg Vwing Pilot Module \xB7 Legion",
+        pack: "legion",
+        model: "ls_nvg_vwingPilot_module",
+        offModel: "ls_nvg_vwingPilot_module",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_nvg_clone_phase1_rangefinder_on",
+        name: "Nvg Clone Phase1 Rangefinder On \xB7 Legion",
+        pack: "legion",
+        model: "ls_nvg_clone_phase1_rangefinder_on",
+        offModel: "ls_nvg_clone_phase1_rangefinder_off",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_nvg_clone_rangefinder_on",
+        name: "Nvg Clone Rangefinder On \xB7 Legion",
+        pack: "legion",
+        model: "ls_nvg_clone_rangefinder_on",
+        offModel: "ls_nvg_clone_rangefinder_off",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_nvg_clone_rangefinder_optic",
+        name: "Nvg Clone Rangefinder Optic \xB7 Legion",
+        pack: "legion",
+        model: "ls_nvg_clone_rangefinder_optic",
+        offModel: "ls_nvg_clone_rangefinder_optic",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_nvg_clone_phase1_visor_on",
+        name: "Nvg Clone Phase1 Visor On \xB7 Legion",
+        pack: "legion",
+        model: "ls_nvg_clone_phase1_visor_on",
+        offModel: "ls_nvg_clone_phase1_visor_off",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_nvg_clone_phase2_visor_on",
+        name: "Nvg Clone Phase2 Visor On \xB7 Legion",
+        pack: "legion",
+        model: "ls_nvg_clone_phase2_visor_on",
+        offModel: "ls_nvg_clone_phase2_visor_off",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "lsd_gar_arfAntenna",
+        name: "Republic ARF Antenna \xB7 Legion",
+        pack: "legion",
+        model: "lsd_gar_arfAntenna",
+        offModel: "lsd_gar_arfAntenna",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "lsd_gar_arfFlaps",
+        name: "Republic ARF Flaps \xB7 Legion",
+        pack: "legion",
+        model: "lsd_gar_arfFlaps",
+        offModel: "lsd_gar_arfFlaps",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "lsd_gar_arfFlapsAntenna",
+        name: "Republic ARF Flaps + Antenna \xB7 Legion",
+        pack: "legion",
+        model: "lsd_gar_arfFlapsAntenna",
+        offModel: "lsd_gar_arfFlapsAntenna",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "lsd_gar_commander_optic",
+        name: "Commander Optic \xB7 Legion",
+        pack: "legion",
+        model: "lsd_gar_commander_optic",
+        offModel: "lsd_gar_commander_optic",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "lsd_gar_p1Commander_nvg",
+        name: "Republic Phase 1 Commander Visor \xB7 Legion",
+        pack: "legion",
+        model: "lsd_gar_p1Commander_nvg",
+        offModel: "lsd_gar_p1Commander_nvg",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_nvg_clone_commando_antenna",
+        name: "Katarn I Clone Commando Antenna \xB7 Legion",
+        pack: "legion",
+        model: "ls_nvg_clone_commando_antenna",
+        offModel: "ls_nvg_clone_commando_antenna",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_nvg_clone_commando_visor",
+        name: "Katarn I Clone Commando Visor \xB7 Legion",
+        pack: "legion",
+        model: "ls_nvg_clone_commando_visor",
+        offModel: "ls_nvg_clone_commando_visor",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "lsd_gar_p1Rangefinder_nvg_on",
+        name: "Republic Phase 1 Trooper Rangefinder \xB7 Legion",
+        pack: "legion",
+        model: "lsd_gar_p1Rangefinder_nvg_on",
+        offModel: "lsd_gar_p1Rangefinder_nvg_off",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "lsd_gar_rangefinder_optic",
+        name: "Rangefinder Optic \xB7 Legion",
+        pack: "legion",
+        model: "lsd_gar_rangefinder_optic",
+        offModel: "lsd_gar_rangefinder_optic",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "ls_gar_recon_nvg_on",
+        name: "Republic Phase 2 Recon Rangefinder \xB7 Legion",
+        pack: "legion",
+        model: "ls_gar_recon_nvg_on",
+        offModel: "ls_gar_recon_nvg_off",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "lsd_gar_nvg_optic",
+        name: "Nvg Optic \xB7 Legion",
+        pack: "legion",
+        model: "lsd_gar_nvg_optic",
+        offModel: "lsd_gar_nvg_optic",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
+      },
+      {
+        id: "lsd_gar_p1Visor_nvg_on",
+        name: "Republic Phase 1 Visor \xB7 Legion",
+        pack: "legion",
+        model: "lsd_gar_p1Visor_nvg_on",
+        offModel: "lsd_gar_p1Visor_nvg_off",
+        maps: [],
+        slots: [],
+        useMeshMaterials: true
       }
     ],
     meshes: {
@@ -7552,6 +8574,7425 @@
             }
           }
         ]
+      },
+      ls_backpack_clone_arc: {
+        url: "./assets/armor/models/ls_backpack_clone_arc.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\backpacks\\arc\\data\\camo1_co.paa",
+            count: 6318,
+            positions: {
+              offset: 0,
+              length: 18954
+            },
+            normals: {
+              offset: 75816,
+              length: 18954
+            },
+            uv: {
+              offset: 151632,
+              length: 12636
+            },
+            arms: {
+              offset: 202176,
+              length: 25272
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/backpacks/arc/data/camo1_co.webp"
+          }
+        ]
+      },
+      ls_backpack_clone_beltbag: {
+        url: "./assets/armor/models/ls_backpack_clone_beltbag.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\backpacks\\beltbag\\data\\camo1_co.paa",
+            count: 1446,
+            positions: {
+              offset: 0,
+              length: 4338
+            },
+            normals: {
+              offset: 17352,
+              length: 4338
+            },
+            uv: {
+              offset: 34704,
+              length: 2892
+            },
+            arms: {
+              offset: 46272,
+              length: 5784
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/backpacks/beltbag/data/camo1_co.webp"
+          }
+        ]
+      },
+      ls_backpack_clone_cdv: {
+        url: "./assets/armor/models/ls_backpack_clone_cdv.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\backpacks\\cdv\\data\\camo1_co.paa",
+            count: 9276,
+            positions: {
+              offset: 0,
+              length: 27828
+            },
+            normals: {
+              offset: 111312,
+              length: 27828
+            },
+            uv: {
+              offset: 222624,
+              length: 18552
+            },
+            arms: {
+              offset: 296832,
+              length: 37104
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/backpacks/cdv/data/camo1_co.webp"
+          }
+        ]
+      },
+      ls_backpack_clone_jt12: {
+        url: "./assets/armor/models/ls_backpack_clone_jt12.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\backpacks\\jt12\\data\\camo1_co.paa",
+            count: 18936,
+            positions: {
+              offset: 0,
+              length: 56808
+            },
+            normals: {
+              offset: 227232,
+              length: 56808
+            },
+            uv: {
+              offset: 454464,
+              length: 37872
+            },
+            arms: {
+              offset: 605952,
+              length: 75744
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/backpacks/jt12/data/camo1_co.webp"
+          }
+        ]
+      },
+      ls_backpack_clone_miniLR: {
+        url: "./assets/armor/models/ls_backpack_clone_miniLR.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\backpacks\\minilr\\data\\camo1_co.paa",
+            count: 2838,
+            positions: {
+              offset: 0,
+              length: 8514
+            },
+            normals: {
+              offset: 34056,
+              length: 8514
+            },
+            uv: {
+              offset: 68112,
+              length: 5676
+            },
+            arms: {
+              offset: 90816,
+              length: 11352
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/backpacks/minilr/data/camo1_co.webp"
+          }
+        ]
+      },
+      ls_backpack_clone_MiniLR_attachment: {
+        url: "./assets/armor/models/ls_backpack_clone_MiniLR_attachment.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\backpacks\\minilr_attachment\\data\\camo1_co.paa",
+            count: 2802,
+            positions: {
+              offset: 0,
+              length: 8406
+            },
+            normals: {
+              offset: 33624,
+              length: 8406
+            },
+            uv: {
+              offset: 67248,
+              length: 5604
+            },
+            arms: {
+              offset: 89664,
+              length: 11208
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/backpacks/minilr_attachment/data/camo1_co.webp"
+          }
+        ]
+      },
+      ls_backpack_clone_standard: {
+        url: "./assets/armor/models/ls_backpack_clone_standard.bin",
+        groups: [
+          {
+            slot: "ammo",
+            selections: [
+              "ammo"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\backpacks\\standard\\data\\ammo_co.paa",
+            count: 13776,
+            positions: {
+              offset: 0,
+              length: 41328
+            },
+            normals: {
+              offset: 165312,
+              length: 41328
+            },
+            uv: {
+              offset: 330624,
+              length: 27552
+            },
+            arms: {
+              offset: 440832,
+              length: 55104
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/backpacks/standard/data/ammo_co.webp"
+          },
+          {
+            slot: "backpack",
+            selections: [
+              "grenade"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\backpacks\\standard\\data\\backpack_co.paa",
+            count: 1506,
+            positions: {
+              offset: 661248,
+              length: 4518
+            },
+            normals: {
+              offset: 679320,
+              length: 4518
+            },
+            uv: {
+              offset: 697392,
+              length: 3012
+            },
+            arms: {
+              offset: 709440,
+              length: 6024
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/backpacks/standard/data/backpack_co.webp"
+          },
+          {
+            slot: "backpack",
+            selections: [
+              "backpack"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\backpacks\\standard\\data\\backpack_co.paa",
+            count: 4032,
+            positions: {
+              offset: 733536,
+              length: 12096
+            },
+            normals: {
+              offset: 781920,
+              length: 12096
+            },
+            uv: {
+              offset: 830304,
+              length: 8064
+            },
+            arms: {
+              offset: 862560,
+              length: 16128
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/backpacks/standard/data/backpack_co.webp"
+          },
+          {
+            slot: "backpack",
+            selections: [
+              "backpack",
+              "grenade"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\backpacks\\standard\\data\\backpack_co.paa",
+            count: 72,
+            positions: {
+              offset: 927072,
+              length: 216
+            },
+            normals: {
+              offset: 927936,
+              length: 216
+            },
+            uv: {
+              offset: 928800,
+              length: 144
+            },
+            arms: {
+              offset: 929376,
+              length: 288
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/backpacks/standard/data/backpack_co.webp"
+          },
+          {
+            slot: "cloth",
+            selections: [
+              "cloth"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\backpacks\\standard\\data\\backpack_co.paa",
+            count: 9168,
+            positions: {
+              offset: 930528,
+              length: 27504
+            },
+            normals: {
+              offset: 1040544,
+              length: 27504
+            },
+            uv: {
+              offset: 1150560,
+              length: 18336
+            },
+            arms: {
+              offset: 1223904,
+              length: 36672
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/backpacks/standard/data/backpack_co.webp"
+          },
+          {
+            slot: "bacta",
+            selections: [
+              "bacta"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\backpacks\\standard\\data\\bacta_co.paa",
+            count: 2484,
+            positions: {
+              offset: 1370592,
+              length: 7452
+            },
+            normals: {
+              offset: 1400400,
+              length: 7452
+            },
+            uv: {
+              offset: 1430208,
+              length: 4968
+            },
+            arms: {
+              offset: 1450080,
+              length: 9936
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/backpacks/standard/data/bacta_co.webp"
+          },
+          {
+            slot: "canister",
+            selections: [
+              "canister"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\backpacks\\standard\\data\\canister_co.paa",
+            count: 2232,
+            positions: {
+              offset: 1489824,
+              length: 6696
+            },
+            normals: {
+              offset: 1516608,
+              length: 6696
+            },
+            uv: {
+              offset: 1543392,
+              length: 4464
+            },
+            arms: {
+              offset: 1561248,
+              length: 8928
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/backpacks/standard/data/canister_co.webp"
+          },
+          {
+            slot: "heavy",
+            selections: [
+              "heavy"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\backpacks\\standard\\data\\heavy_co.paa",
+            count: 6738,
+            positions: {
+              offset: 1596960,
+              length: 20214
+            },
+            normals: {
+              offset: 1677816,
+              length: 20214
+            },
+            uv: {
+              offset: 1758672,
+              length: 13476
+            },
+            arms: {
+              offset: 1812576,
+              length: 26952
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/backpacks/standard/data/heavy_co.webp"
+          },
+          {
+            slot: "lower_supplies",
+            selections: [
+              "lower_supplies"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\backpacks\\standard\\data\\lower_supplies_co.paa",
+            count: 348,
+            positions: {
+              offset: 1920384,
+              length: 1044
+            },
+            normals: {
+              offset: 1924560,
+              length: 1044
+            },
+            uv: {
+              offset: 1928736,
+              length: 696
+            },
+            arms: {
+              offset: 1931520,
+              length: 1392
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/backpacks/standard/data/lower_supplies_co.webp"
+          },
+          {
+            slot: "medic",
+            selections: [
+              "medic"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\backpacks\\standard\\data\\medic_co.paa",
+            count: 15966,
+            positions: {
+              offset: 1937088,
+              length: 47898
+            },
+            normals: {
+              offset: 2128680,
+              length: 47898
+            },
+            uv: {
+              offset: 2320272,
+              length: 31932
+            },
+            arms: {
+              offset: 2448e3,
+              length: 63864
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/backpacks/standard/data/medic_co.webp"
+          },
+          {
+            slot: "radio",
+            selections: [
+              "radio"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\backpacks\\standard\\data\\radio_co.paa",
+            count: 3384,
+            positions: {
+              offset: 2703456,
+              length: 10152
+            },
+            normals: {
+              offset: 2744064,
+              length: 10152
+            },
+            uv: {
+              offset: 2784672,
+              length: 6768
+            },
+            arms: {
+              offset: 2811744,
+              length: 13536
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/backpacks/standard/data/radio_co.webp"
+          },
+          {
+            slot: "rockets",
+            selections: [
+              "rockets"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\backpacks\\standard\\data\\rockets_co.paa",
+            count: 6084,
+            positions: {
+              offset: 2865888,
+              length: 18252
+            },
+            normals: {
+              offset: 2938896,
+              length: 18252
+            },
+            uv: {
+              offset: 3011904,
+              length: 12168
+            },
+            arms: {
+              offset: 3060576,
+              length: 24336
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/backpacks/standard/data/rockets_co.webp"
+          },
+          {
+            slot: "supplies",
+            selections: [
+              "supplies"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\backpacks\\standard\\data\\supplies_co.paa",
+            count: 2100,
+            positions: {
+              offset: 3157920,
+              length: 6300
+            },
+            normals: {
+              offset: 3183120,
+              length: 6300
+            },
+            uv: {
+              offset: 3208320,
+              length: 4200
+            },
+            arms: {
+              offset: 3225120,
+              length: 8400
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/backpacks/standard/data/supplies_co.webp"
+          }
+        ]
+      },
+      ls_facewear_clone_arf: {
+        url: "./assets/armor/models/ls_facewear_clone_arf.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\equipment\\arf\\data\\camo1_co.paa",
+            count: 3672,
+            positions: {
+              offset: 0,
+              length: 11016
+            },
+            normals: {
+              offset: 44064,
+              length: 11016
+            },
+            uv: {
+              offset: 88128,
+              length: 7344
+            },
+            arms: {
+              offset: 117504,
+              length: 14688
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/equipment/arf/data/camo1_co.webp"
+          }
+        ]
+      },
+      ls_binoculars_clone: {
+        url: "./assets/armor/models/ls_binoculars_clone.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\equipment\\binoculars\\data\\electrobinoculars\\camo1_co.paa",
+            count: 5484,
+            positions: {
+              offset: 0,
+              length: 16452
+            },
+            normals: {
+              offset: 65808,
+              length: 16452
+            },
+            uv: {
+              offset: 131616,
+              length: 10968
+            },
+            arms: {
+              offset: 175488,
+              length: 21936
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/equipment/binoculars/data/electrobinoculars/camo1_co.webp"
+          }
+        ]
+      },
+      ls_binoculars_cloneCommander: {
+        url: "./assets/armor/models/ls_binoculars_cloneCommander.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\equipment\\binoculars\\data\\electrobinocularscommander\\camo1_co.paa",
+            count: 3438,
+            positions: {
+              offset: 0,
+              length: 10314
+            },
+            normals: {
+              offset: 41256,
+              length: 10314
+            },
+            uv: {
+              offset: 82512,
+              length: 6876
+            },
+            arms: {
+              offset: 110016,
+              length: 13752
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/equipment/binoculars/data/electrobinocularscommander/camo1_co.webp"
+          }
+        ]
+      },
+      ls_binoculars_cloneCommander_optic: {
+        url: "./assets/armor/models/ls_binoculars_cloneCommander_optic.bin",
+        groups: [
+          {
+            slot: "",
+            selections: [],
+            texture: "ls\\core\\addons\\characters_clone\\equipment\\binoculars\\data\\electrobinocularscommander\\optic_ca.paa",
+            count: 6,
+            positions: {
+              offset: 0,
+              length: 18
+            },
+            normals: {
+              offset: 72,
+              length: 18
+            },
+            uv: {
+              offset: 144,
+              length: 12
+            },
+            arms: {
+              offset: 192,
+              length: 24
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/equipment/binoculars/data/electrobinocularscommander/optic_ca.webp"
+          }
+        ]
+      },
+      ls_clone_phase1Headlamp: {
+        url: "./assets/armor/models/ls_clone_phase1Headlamp.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\equipment\\headlamps\\data\\camo1_co.paa",
+            count: 2292,
+            positions: {
+              offset: 0,
+              length: 6876
+            },
+            normals: {
+              offset: 27504,
+              length: 6876
+            },
+            uv: {
+              offset: 55008,
+              length: 4584
+            },
+            arms: {
+              offset: 73344,
+              length: 9168
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/equipment/headlamps/data/camo1_co.webp"
+          }
+        ]
+      },
+      ls_clone_phase1Headlamp_double: {
+        url: "./assets/armor/models/ls_clone_phase1Headlamp_double.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\equipment\\headlamps\\data\\camo1_co.paa",
+            count: 4584,
+            positions: {
+              offset: 0,
+              length: 13752
+            },
+            normals: {
+              offset: 55008,
+              length: 13752
+            },
+            uv: {
+              offset: 110016,
+              length: 9168
+            },
+            arms: {
+              offset: 146688,
+              length: 18336
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/equipment/headlamps/data/camo1_co.webp"
+          }
+        ]
+      },
+      ls_clone_phase1Headlamp_left: {
+        url: "./assets/armor/models/ls_clone_phase1Headlamp_left.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\equipment\\headlamps\\data\\camo1_co.paa",
+            count: 2292,
+            positions: {
+              offset: 0,
+              length: 6876
+            },
+            normals: {
+              offset: 27504,
+              length: 6876
+            },
+            uv: {
+              offset: 55008,
+              length: 4584
+            },
+            arms: {
+              offset: 73344,
+              length: 9168
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/equipment/headlamps/data/camo1_co.webp"
+          }
+        ]
+      },
+      ls_clone_phase2Headlamp: {
+        url: "./assets/armor/models/ls_clone_phase2Headlamp.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\equipment\\headlamps\\data\\camo1_co.paa",
+            count: 2292,
+            positions: {
+              offset: 0,
+              length: 6876
+            },
+            normals: {
+              offset: 27504,
+              length: 6876
+            },
+            uv: {
+              offset: 55008,
+              length: 4584
+            },
+            arms: {
+              offset: 73344,
+              length: 9168
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/equipment/headlamps/data/camo1_co.webp"
+          }
+        ]
+      },
+      ls_clone_phase2Headlamp_double: {
+        url: "./assets/armor/models/ls_clone_phase2Headlamp_double.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\equipment\\headlamps\\data\\camo1_co.paa",
+            count: 4584,
+            positions: {
+              offset: 0,
+              length: 13752
+            },
+            normals: {
+              offset: 55008,
+              length: 13752
+            },
+            uv: {
+              offset: 110016,
+              length: 9168
+            },
+            arms: {
+              offset: 146688,
+              length: 18336
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/equipment/headlamps/data/camo1_co.webp"
+          }
+        ]
+      },
+      ls_clone_phase2Headlamp_right: {
+        url: "./assets/armor/models/ls_clone_phase2Headlamp_right.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\equipment\\headlamps\\data\\camo1_co.paa",
+            count: 2292,
+            positions: {
+              offset: 0,
+              length: 6876
+            },
+            normals: {
+              offset: 27504,
+              length: 6876
+            },
+            uv: {
+              offset: 55008,
+              length: 4584
+            },
+            arms: {
+              offset: 73344,
+              length: 9168
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/equipment/headlamps/data/camo1_co.webp"
+          }
+        ]
+      },
+      ls_nvg_clone_commander: {
+        url: "./assets/armor/models/ls_nvg_clone_commander.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\equipment\\nvgs\\commander\\data\\camo1_co.paa",
+            count: 6666,
+            positions: {
+              offset: 0,
+              length: 19998
+            },
+            normals: {
+              offset: 79992,
+              length: 19998
+            },
+            uv: {
+              offset: 159984,
+              length: 13332
+            },
+            arms: {
+              offset: 213312,
+              length: 26664
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/equipment/nvgs/commander/data/camo1_co.webp"
+          }
+        ]
+      },
+      ls_nvg_arcPilot_module: {
+        url: "./assets/armor/models/ls_nvg_arcPilot_module.bin",
+        groups: [
+          {
+            slot: "arc170",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\equipment\\nvgs\\phase3pilot\\data\\arc_ca.paa",
+            count: 444,
+            positions: {
+              offset: 0,
+              length: 1332
+            },
+            normals: {
+              offset: 5328,
+              length: 1332
+            },
+            uv: {
+              offset: 10656,
+              length: 888
+            },
+            arms: {
+              offset: 14208,
+              length: 1776
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/equipment/nvgs/phase3pilot/data/arc_ca.webp"
+          }
+        ]
+      },
+      ls_nvg_imperialPilot_module: {
+        url: "./assets/armor/models/ls_nvg_imperialPilot_module.bin",
+        groups: [
+          {
+            slot: "imperial",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\equipment\\nvgs\\phase3pilot\\data\\imperial_co.paa",
+            count: 8214,
+            positions: {
+              offset: 0,
+              length: 24642
+            },
+            normals: {
+              offset: 98568,
+              length: 24642
+            },
+            uv: {
+              offset: 197136,
+              length: 16428
+            },
+            arms: {
+              offset: 262848,
+              length: 32856
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/equipment/nvgs/phase3pilot/data/imperial_co.webp"
+          }
+        ]
+      },
+      ls_nvg_vwingPilot_module: {
+        url: "./assets/armor/models/ls_nvg_vwingPilot_module.bin",
+        groups: [
+          {
+            slot: "vwing",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\equipment\\nvgs\\phase3pilot\\data\\vwing_co.paa",
+            count: 5910,
+            positions: {
+              offset: 0,
+              length: 17730
+            },
+            normals: {
+              offset: 70920,
+              length: 17730
+            },
+            uv: {
+              offset: 141840,
+              length: 11820
+            },
+            arms: {
+              offset: 189120,
+              length: 23640
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/equipment/nvgs/phase3pilot/data/vwing_co.webp"
+          }
+        ]
+      },
+      ls_nvg_clone_phase1_rangefinder_off: {
+        url: "./assets/armor/models/ls_nvg_clone_phase1_rangefinder_off.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\equipment\\nvgs\\rangefinder\\data\\camo1_co.paa",
+            count: 810,
+            positions: {
+              offset: 0,
+              length: 2430
+            },
+            normals: {
+              offset: 9720,
+              length: 2430
+            },
+            uv: {
+              offset: 19440,
+              length: 1620
+            },
+            arms: {
+              offset: 25920,
+              length: 3240
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/equipment/nvgs/rangefinder/data/camo1_co.webp"
+          }
+        ]
+      },
+      ls_nvg_clone_phase1_rangefinder_on: {
+        url: "./assets/armor/models/ls_nvg_clone_phase1_rangefinder_on.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\equipment\\nvgs\\rangefinder\\data\\camo1_co.paa",
+            count: 810,
+            positions: {
+              offset: 0,
+              length: 2430
+            },
+            normals: {
+              offset: 9720,
+              length: 2430
+            },
+            uv: {
+              offset: 19440,
+              length: 1620
+            },
+            arms: {
+              offset: 25920,
+              length: 3240
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/equipment/nvgs/rangefinder/data/camo1_co.webp"
+          }
+        ]
+      },
+      ls_nvg_clone_rangefinder_off: {
+        url: "./assets/armor/models/ls_nvg_clone_rangefinder_off.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\equipment\\nvgs\\rangefinder\\data\\camo1_co.paa",
+            count: 810,
+            positions: {
+              offset: 0,
+              length: 2430
+            },
+            normals: {
+              offset: 9720,
+              length: 2430
+            },
+            uv: {
+              offset: 19440,
+              length: 1620
+            },
+            arms: {
+              offset: 25920,
+              length: 3240
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/equipment/nvgs/rangefinder/data/camo1_co.webp"
+          }
+        ]
+      },
+      ls_nvg_clone_rangefinder_on: {
+        url: "./assets/armor/models/ls_nvg_clone_rangefinder_on.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\equipment\\nvgs\\rangefinder\\data\\camo1_co.paa",
+            count: 810,
+            positions: {
+              offset: 0,
+              length: 2430
+            },
+            normals: {
+              offset: 9720,
+              length: 2430
+            },
+            uv: {
+              offset: 19440,
+              length: 1620
+            },
+            arms: {
+              offset: 25920,
+              length: 3240
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/equipment/nvgs/rangefinder/data/camo1_co.webp"
+          }
+        ]
+      },
+      ls_nvg_clone_rangefinder_optic: {
+        url: "./assets/armor/models/ls_nvg_clone_rangefinder_optic.bin",
+        groups: [
+          {
+            slot: "",
+            selections: [],
+            texture: "ls\\core\\addons\\characters_clone\\equipment\\nvgs\\rangefinder\\data\\optic_ca.paa",
+            count: 6,
+            positions: {
+              offset: 0,
+              length: 18
+            },
+            normals: {
+              offset: 72,
+              length: 18
+            },
+            uv: {
+              offset: 144,
+              length: 12
+            },
+            arms: {
+              offset: 192,
+              length: 24
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/equipment/nvgs/rangefinder/data/optic_ca.webp"
+          }
+        ]
+      },
+      ls_nvg_clone_phase1_visor_off: {
+        url: "./assets/armor/models/ls_nvg_clone_phase1_visor_off.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\equipment\\nvgs\\visor\\data\\camo1_co.paa",
+            count: 5112,
+            positions: {
+              offset: 0,
+              length: 15336
+            },
+            normals: {
+              offset: 61344,
+              length: 15336
+            },
+            uv: {
+              offset: 122688,
+              length: 10224
+            },
+            arms: {
+              offset: 163584,
+              length: 20448
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/equipment/nvgs/visor/data/camo1_co.webp"
+          }
+        ]
+      },
+      ls_nvg_clone_phase1_visor_on: {
+        url: "./assets/armor/models/ls_nvg_clone_phase1_visor_on.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\equipment\\nvgs\\visor\\data\\camo1_co.paa",
+            count: 5112,
+            positions: {
+              offset: 0,
+              length: 15336
+            },
+            normals: {
+              offset: 61344,
+              length: 15336
+            },
+            uv: {
+              offset: 122688,
+              length: 10224
+            },
+            arms: {
+              offset: 163584,
+              length: 20448
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/equipment/nvgs/visor/data/camo1_co.webp"
+          }
+        ]
+      },
+      ls_nvg_clone_phase2_visor_off: {
+        url: "./assets/armor/models/ls_nvg_clone_phase2_visor_off.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\equipment\\nvgs\\visor\\data\\camo1_co.paa",
+            count: 5112,
+            positions: {
+              offset: 0,
+              length: 15336
+            },
+            normals: {
+              offset: 61344,
+              length: 15336
+            },
+            uv: {
+              offset: 122688,
+              length: 10224
+            },
+            arms: {
+              offset: 163584,
+              length: 20448
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/equipment/nvgs/visor/data/camo1_co.webp"
+          }
+        ]
+      },
+      ls_nvg_clone_phase2_visor_on: {
+        url: "./assets/armor/models/ls_nvg_clone_phase2_visor_on.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\equipment\\nvgs\\visor\\data\\camo1_co.paa",
+            count: 5112,
+            positions: {
+              offset: 0,
+              length: 15336
+            },
+            normals: {
+              offset: 61344,
+              length: 15336
+            },
+            uv: {
+              offset: 122688,
+              length: 10224
+            },
+            arms: {
+              offset: 163584,
+              length: 20448
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/equipment/nvgs/visor/data/camo1_co.webp"
+          }
+        ]
+      },
+      ls_helmet_clone_airborne: {
+        url: "./assets/armor/models/ls_helmet_clone_airborne.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [],
+            texture: "ls\\core\\addons\\characters_clone\\helmets\\airborne\\data\\camo1_co.paa",
+            count: 288,
+            positions: {
+              offset: 0,
+              length: 864
+            },
+            normals: {
+              offset: 3456,
+              length: 864
+            },
+            uv: {
+              offset: 6912,
+              length: 576
+            },
+            arms: {
+              offset: 9216,
+              length: 1152
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/helmets/airborne/data/camo1_co.webp"
+          },
+          {
+            slot: "camo1",
+            selections: [
+              "visor"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\helmets\\airborne\\data\\camo1_co.paa",
+            count: 264,
+            positions: {
+              offset: 13824,
+              length: 792
+            },
+            normals: {
+              offset: 16992,
+              length: 792
+            },
+            uv: {
+              offset: 20160,
+              length: 528
+            },
+            arms: {
+              offset: 22272,
+              length: 1056
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/helmets/airborne/data/camo1_co.webp"
+          },
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\helmets\\airborne\\data\\camo1_co.paa",
+            count: 11721,
+            positions: {
+              offset: 26496,
+              length: 35163
+            },
+            normals: {
+              offset: 167148,
+              length: 35163
+            },
+            uv: {
+              offset: 307800,
+              length: 23442
+            },
+            arms: {
+              offset: 401568,
+              length: 46884
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/helmets/airborne/data/camo1_co.webp"
+          }
+        ]
+      },
+      ls_helmet_clone_arc: {
+        url: "./assets/armor/models/ls_helmet_clone_arc.bin",
+        groups: [
+          {
+            slot: "arc_helmet",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\helmets\\arc\\data\\helmet_co.paa",
+            count: 252,
+            positions: {
+              offset: 0,
+              length: 756
+            },
+            normals: {
+              offset: 3024,
+              length: 756
+            },
+            uv: {
+              offset: 6048,
+              length: 504
+            },
+            arms: {
+              offset: 8064,
+              length: 1008
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/helmets/arc/data/helmet_co.webp"
+          },
+          {
+            slot: "arc_helmet",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\helmets\\arc\\data\\helmet_co.paa",
+            count: 14805,
+            positions: {
+              offset: 12096,
+              length: 44415
+            },
+            normals: {
+              offset: 189756,
+              length: 44415
+            },
+            uv: {
+              offset: 367416,
+              length: 29610
+            },
+            arms: {
+              offset: 485856,
+              length: 59220
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/helmets/arc/data/helmet_co.webp"
+          },
+          {
+            slot: "arc_helmet",
+            selections: [
+              "camo1",
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\helmets\\arc\\data\\helmet_co.paa",
+            count: 18,
+            positions: {
+              offset: 722736,
+              length: 54
+            },
+            normals: {
+              offset: 722952,
+              length: 54
+            },
+            uv: {
+              offset: 723168,
+              length: 36
+            },
+            arms: {
+              offset: 723312,
+              length: 72
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/helmets/arc/data/helmet_co.webp"
+          }
+        ]
+      },
+      ls_helmet_clone_arf: {
+        url: "./assets/armor/models/ls_helmet_clone_arf.bin",
+        groups: [
+          {
+            slot: "visor",
+            selections: [
+              "visor"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\helmets\\arf\\data\\helmet_co.paa",
+            count: 60,
+            positions: {
+              offset: 0,
+              length: 180
+            },
+            normals: {
+              offset: 720,
+              length: 180
+            },
+            uv: {
+              offset: 1440,
+              length: 120
+            },
+            arms: {
+              offset: 1920,
+              length: 240
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/helmets/arf/data/helmet_co.webp"
+          },
+          {
+            slot: "helmet",
+            selections: [
+              "helmet"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\helmets\\arf\\data\\helmet_co.paa",
+            count: 5178,
+            positions: {
+              offset: 2880,
+              length: 15534
+            },
+            normals: {
+              offset: 65016,
+              length: 15534
+            },
+            uv: {
+              offset: 127152,
+              length: 10356
+            },
+            arms: {
+              offset: 168576,
+              length: 20712
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/helmets/arf/data/helmet_co.webp"
+          }
+        ]
+      },
+      ls_helmet_clone_atrtDriver: {
+        url: "./assets/armor/models/ls_helmet_clone_atrtDriver.bin",
+        groups: [
+          {
+            slot: "helmet",
+            selections: [],
+            texture: "ls\\core\\addons\\characters_clone\\helmets\\atrtdriver\\data\\helmet_co.paa",
+            count: 360,
+            positions: {
+              offset: 0,
+              length: 1080
+            },
+            normals: {
+              offset: 4320,
+              length: 1080
+            },
+            uv: {
+              offset: 8640,
+              length: 720
+            },
+            arms: {
+              offset: 11520,
+              length: 1440
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/helmets/atrtdriver/data/helmet_co.webp"
+          },
+          {
+            slot: "helmet",
+            selections: [
+              "visor"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\helmets\\atrtdriver\\data\\helmet_co.paa",
+            count: 276,
+            positions: {
+              offset: 17280,
+              length: 828
+            },
+            normals: {
+              offset: 20592,
+              length: 828
+            },
+            uv: {
+              offset: 23904,
+              length: 552
+            },
+            arms: {
+              offset: 26112,
+              length: 1104
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/helmets/atrtdriver/data/helmet_co.webp"
+          },
+          {
+            slot: "helmet",
+            selections: [
+              "helmet"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\helmets\\atrtdriver\\data\\helmet_co.paa",
+            count: 19533,
+            positions: {
+              offset: 30528,
+              length: 58599
+            },
+            normals: {
+              offset: 264924,
+              length: 58599
+            },
+            uv: {
+              offset: 499320,
+              length: 39066
+            },
+            arms: {
+              offset: 655584,
+              length: 78132
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/helmets/atrtdriver/data/helmet_co.webp"
+          }
+        ]
+      },
+      ls_helmet_clone_p1: {
+        url: "./assets/armor/models/ls_helmet_clone_p1.bin",
+        groups: [
+          {
+            slot: "vrarmoremmisive",
+            selections: [
+              "helmet"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\helmets\\phase1\\data\\helmet_co.paa",
+            count: 12,
+            positions: {
+              offset: 0,
+              length: 36
+            },
+            normals: {
+              offset: 144,
+              length: 36
+            },
+            uv: {
+              offset: 288,
+              length: 24
+            },
+            arms: {
+              offset: 384,
+              length: 48
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/helmets/phase1/data/helmet_co.webp"
+          },
+          {
+            slot: "helmet",
+            selections: [
+              "helmet"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\helmets\\phase1\\data\\helmet_co.paa",
+            count: 13893,
+            positions: {
+              offset: 576,
+              length: 41679
+            },
+            normals: {
+              offset: 167292,
+              length: 41679
+            },
+            uv: {
+              offset: 334008,
+              length: 27786
+            },
+            arms: {
+              offset: 445152,
+              length: 55572
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/helmets/phase1/data/helmet_co.webp"
+          },
+          {
+            slot: "visor",
+            selections: [
+              "visor"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\helmets\\phase1\\data\\visor_co.paa",
+            count: 456,
+            positions: {
+              offset: 667440,
+              length: 1368
+            },
+            normals: {
+              offset: 672912,
+              length: 1368
+            },
+            uv: {
+              offset: 678384,
+              length: 912
+            },
+            arms: {
+              offset: 682032,
+              length: 1824
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/helmets/phase1/data/visor_co.webp"
+          }
+        ]
+      },
+      ls_helmet_clone_p2: {
+        url: "./assets/armor/models/ls_helmet_clone_p2.bin",
+        groups: [
+          {
+            slot: "helmet",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\helmets\\phase2\\data\\helmet_co.paa",
+            count: 15486,
+            positions: {
+              offset: 0,
+              length: 46458
+            },
+            normals: {
+              offset: 185832,
+              length: 46458
+            },
+            uv: {
+              offset: 371664,
+              length: 30972
+            },
+            arms: {
+              offset: 495552,
+              length: 61944
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/helmets/phase2/data/helmet_co.webp"
+          },
+          {
+            slot: "visor",
+            selections: [
+              "visor"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\helmets\\phase2\\data\\visor_co.paa",
+            count: 258,
+            positions: {
+              offset: 743328,
+              length: 774
+            },
+            normals: {
+              offset: 746424,
+              length: 774
+            },
+            uv: {
+              offset: 749520,
+              length: 516
+            },
+            arms: {
+              offset: 751584,
+              length: 1032
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/helmets/phase2/data/visor_co.webp"
+          }
+        ]
+      },
+      ls_helmet_clone_pilotPhase2: {
+        url: "./assets/armor/models/ls_helmet_clone_pilotPhase2.bin",
+        groups: [
+          {
+            slot: "vrarmoremmisive",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\helmets\\phase2pilot\\data\\camo2_co.paa",
+            count: 426,
+            positions: {
+              offset: 0,
+              length: 1278
+            },
+            normals: {
+              offset: 5112,
+              length: 1278
+            },
+            uv: {
+              offset: 10224,
+              length: 852
+            },
+            arms: {
+              offset: 13632,
+              length: 1704
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/helmets/phase2pilot/data/camo2_co.webp"
+          },
+          {
+            slot: "camo1",
+            selections: [
+              "visor"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\helmets\\phase2pilot\\data\\camo1_co.paa",
+            count: 102,
+            positions: {
+              offset: 20448,
+              length: 306
+            },
+            normals: {
+              offset: 21672,
+              length: 306
+            },
+            uv: {
+              offset: 22896,
+              length: 204
+            },
+            arms: {
+              offset: 23712,
+              length: 408
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/helmets/phase2pilot/data/camo1_co.webp"
+          },
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\helmets\\phase2pilot\\data\\camo1_co.paa",
+            count: 7098,
+            positions: {
+              offset: 25344,
+              length: 21294
+            },
+            normals: {
+              offset: 110520,
+              length: 21294
+            },
+            uv: {
+              offset: 195696,
+              length: 14196
+            },
+            arms: {
+              offset: 252480,
+              length: 28392
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/helmets/phase2pilot/data/camo1_co.webp"
+          },
+          {
+            slot: "camo2",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\helmets\\phase2pilot\\data\\camo2_co.paa",
+            count: 8988,
+            positions: {
+              offset: 366048,
+              length: 26964
+            },
+            normals: {
+              offset: 473904,
+              length: 26964
+            },
+            uv: {
+              offset: 581760,
+              length: 17976
+            },
+            arms: {
+              offset: 653664,
+              length: 35952
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/helmets/phase2pilot/data/camo2_co.webp"
+          }
+        ]
+      },
+      ls_helmet_clone_phase3Pilot: {
+        url: "./assets/armor/models/ls_helmet_clone_phase3Pilot.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\helmets\\phase3pilot\\data\\camo1_co.paa",
+            count: 17526,
+            positions: {
+              offset: 0,
+              length: 52578
+            },
+            normals: {
+              offset: 210312,
+              length: 52578
+            },
+            uv: {
+              offset: 420624,
+              length: 35052
+            },
+            arms: {
+              offset: 560832,
+              length: 70104
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/helmets/phase3pilot/data/camo1_co.webp"
+          },
+          {
+            slot: "camo2",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\helmets\\phase3pilot\\data\\camo2_co.paa",
+            count: 20280,
+            positions: {
+              offset: 841248,
+              length: 60840
+            },
+            normals: {
+              offset: 1084608,
+              length: 60840
+            },
+            uv: {
+              offset: 1327968,
+              length: 40560
+            },
+            arms: {
+              offset: 1490208,
+              length: 81120
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/helmets/phase3pilot/data/camo2_co.webp"
+          }
+        ]
+      },
+      ls_helmet_clone_scout: {
+        url: "./assets/armor/models/ls_helmet_clone_scout.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\helmets\\scout\\data\\camo1_co.paa",
+            count: 9054,
+            positions: {
+              offset: 0,
+              length: 27162
+            },
+            normals: {
+              offset: 108648,
+              length: 27162
+            },
+            uv: {
+              offset: 217296,
+              length: 18108
+            },
+            arms: {
+              offset: 289728,
+              length: 36216
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/helmets/scout/data/camo1_co.webp"
+          },
+          {
+            slot: "visor",
+            selections: [
+              "visor"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\helmets\\scout\\data\\camo1_co.paa",
+            count: 93,
+            positions: {
+              offset: 434592,
+              length: 279
+            },
+            normals: {
+              offset: 435708,
+              length: 279
+            },
+            uv: {
+              offset: 436824,
+              length: 186
+            },
+            arms: {
+              offset: 437568,
+              length: 372
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/helmets/scout/data/camo1_co.webp"
+          },
+          {
+            slot: "visor",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\helmets\\scout\\data\\camo1_co.paa",
+            count: 21,
+            positions: {
+              offset: 439056,
+              length: 63
+            },
+            normals: {
+              offset: 439308,
+              length: 63
+            },
+            uv: {
+              offset: 439560,
+              length: 42
+            },
+            arms: {
+              offset: 439728,
+              length: 84
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/helmets/scout/data/camo1_co.webp"
+          }
+        ]
+      },
+      ls_uniform_jediCommander: {
+        url: "./assets/armor/models/ls_uniform_jediCommander.bin",
+        groups: [
+          {
+            slot: "armor",
+            selections: [
+              "armor_camo"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\uniforms\\jedicommander\\data\\armor_co.paa",
+            count: 46137,
+            positions: {
+              offset: 0,
+              length: 138411
+            },
+            normals: {
+              offset: 553644,
+              length: 138411
+            },
+            uv: {
+              offset: 1107288,
+              length: 92274
+            },
+            arms: {
+              offset: 1476384,
+              length: 184548
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/uniforms/jedicommander/data/armor_co.webp"
+          },
+          {
+            slot: "belt",
+            selections: [
+              "belt_camo"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\uniforms\\jedicommander\\data\\belt_co.paa",
+            count: 7839,
+            positions: {
+              offset: 2214576,
+              length: 23517
+            },
+            normals: {
+              offset: 2308644,
+              length: 23517
+            },
+            uv: {
+              offset: 2402712,
+              length: 15678
+            },
+            arms: {
+              offset: 2465424,
+              length: 31356
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/uniforms/jedicommander/data/belt_co.webp"
+          },
+          {
+            slot: "robes",
+            selections: [
+              "robes_camo"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\uniforms\\jedicommander\\data\\robes_co.paa",
+            count: 5664,
+            positions: {
+              offset: 2590848,
+              length: 16992
+            },
+            normals: {
+              offset: 2658816,
+              length: 16992
+            },
+            uv: {
+              offset: 2726784,
+              length: 11328
+            },
+            arms: {
+              offset: 2772096,
+              length: 22656
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/uniforms/jedicommander/data/robes_co.webp"
+          },
+          {
+            slot: "undersuit",
+            selections: [
+              "under_camo"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\uniforms\\jedicommander\\data\\undersuit_co.paa",
+            count: 13701,
+            positions: {
+              offset: 2862720,
+              length: 41103
+            },
+            normals: {
+              offset: 3027132,
+              length: 41103
+            },
+            uv: {
+              offset: 3191544,
+              length: 27402
+            },
+            arms: {
+              offset: 3301152,
+              length: 54804
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/uniforms/jedicommander/data/undersuit_co.webp"
+          }
+        ]
+      },
+      ls_uniform_clone_phase2: {
+        url: "./assets/armor/models/ls_uniform_clone_phase2.bin",
+        groups: [
+          {
+            slot: "lower",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\uniforms\\phase2\\data\\lower_armor_co.paa",
+            count: 20202,
+            positions: {
+              offset: 0,
+              length: 60606
+            },
+            normals: {
+              offset: 242424,
+              length: 60606
+            },
+            uv: {
+              offset: 484848,
+              length: 40404
+            },
+            arms: {
+              offset: 646464,
+              length: 80808
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/uniforms/phase2/data/lower_armor_co.webp"
+          },
+          {
+            slot: "undersuit",
+            selections: [],
+            texture: "ls\\core\\addons\\characters_clone\\uniforms\\phase2\\data\\undersuit_co.paa",
+            count: 13614,
+            positions: {
+              offset: 969696,
+              length: 40842
+            },
+            normals: {
+              offset: 1133064,
+              length: 40842
+            },
+            uv: {
+              offset: 1296432,
+              length: 27228
+            },
+            arms: {
+              offset: 1405344,
+              length: 54456
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/uniforms/phase2/data/undersuit_co.webp"
+          },
+          {
+            slot: "upper",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\uniforms\\phase2\\data\\upper_armor_co.paa",
+            count: 20532,
+            positions: {
+              offset: 1623168,
+              length: 61596
+            },
+            normals: {
+              offset: 1869552,
+              length: 61596
+            },
+            uv: {
+              offset: 2115936,
+              length: 41064
+            },
+            arms: {
+              offset: 2280192,
+              length: 82128
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/uniforms/phase2/data/upper_armor_co.webp"
+          }
+        ]
+      },
+      ls_uniform_clone_phase2_mc: {
+        url: "./assets/armor/models/ls_uniform_clone_phase2_mc.bin",
+        groups: [
+          {
+            slot: "lower",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\uniforms\\phase2\\data\\lower_armor_co.paa",
+            count: 20202,
+            positions: {
+              offset: 0,
+              length: 60606
+            },
+            normals: {
+              offset: 242424,
+              length: 60606
+            },
+            uv: {
+              offset: 484848,
+              length: 40404
+            },
+            arms: {
+              offset: 646464,
+              length: 80808
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/uniforms/phase2/data/lower_armor_co.webp"
+          },
+          {
+            slot: "mc_accessories",
+            selections: [],
+            texture: "ls\\core\\addons\\characters_clone\\uniforms\\phase2\\data\\mc_accessories_co.paa",
+            count: 30,
+            positions: {
+              offset: 969696,
+              length: 90
+            },
+            normals: {
+              offset: 970056,
+              length: 90
+            },
+            uv: {
+              offset: 970416,
+              length: 60
+            },
+            arms: {
+              offset: 970656,
+              length: 120
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/uniforms/phase2/data/mc_accessories_co.webp"
+          },
+          {
+            slot: "mc_accessories",
+            selections: [
+              "camo3"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\uniforms\\phase2\\data\\mc_accessories_co.paa",
+            count: 9336,
+            positions: {
+              offset: 971136,
+              length: 28008
+            },
+            normals: {
+              offset: 1083168,
+              length: 28008
+            },
+            uv: {
+              offset: 1195200,
+              length: 18672
+            },
+            arms: {
+              offset: 1269888,
+              length: 37344
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/uniforms/phase2/data/mc_accessories_co.webp"
+          },
+          {
+            slot: "undersuit",
+            selections: [
+              "undersuit"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\uniforms\\phase2\\data\\undersuit_co.paa",
+            count: 13614,
+            positions: {
+              offset: 1419264,
+              length: 40842
+            },
+            normals: {
+              offset: 1582632,
+              length: 40842
+            },
+            uv: {
+              offset: 1746e3,
+              length: 27228
+            },
+            arms: {
+              offset: 1854912,
+              length: 54456
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/uniforms/phase2/data/undersuit_co.webp"
+          },
+          {
+            slot: "upper",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\uniforms\\phase2\\data\\upper_armor_co.paa",
+            count: 18888,
+            positions: {
+              offset: 2072736,
+              length: 56664
+            },
+            normals: {
+              offset: 2299392,
+              length: 56664
+            },
+            uv: {
+              offset: 2526048,
+              length: 37776
+            },
+            arms: {
+              offset: 2677152,
+              length: 75552
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/uniforms/phase2/data/upper_armor_co.webp"
+          }
+        ]
+      },
+      ls_uniform_clone_scout: {
+        url: "./assets/armor/models/ls_uniform_clone_scout.bin",
+        groups: [
+          {
+            slot: "armor",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\uniforms\\scout\\data\\armor_co.paa",
+            count: 12378,
+            positions: {
+              offset: 0,
+              length: 37134
+            },
+            normals: {
+              offset: 148536,
+              length: 37134
+            },
+            uv: {
+              offset: 297072,
+              length: 24756
+            },
+            arms: {
+              offset: 396096,
+              length: 49512
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/uniforms/scout/data/armor_co.webp"
+          },
+          {
+            slot: "armor_fabric",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\uniforms\\scout\\data\\armor_co.paa",
+            count: 6066,
+            positions: {
+              offset: 594144,
+              length: 18198
+            },
+            normals: {
+              offset: 666936,
+              length: 18198
+            },
+            uv: {
+              offset: 739728,
+              length: 12132
+            },
+            arms: {
+              offset: 788256,
+              length: 24264
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/uniforms/scout/data/armor_co.webp"
+          },
+          {
+            slot: "camo1_metal",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\uniforms\\scout\\data\\camo1_co.paa",
+            count: 11874,
+            positions: {
+              offset: 885312,
+              length: 35622
+            },
+            normals: {
+              offset: 1027800,
+              length: 35622
+            },
+            uv: {
+              offset: 1170288,
+              length: 23748
+            },
+            arms: {
+              offset: 1265280,
+              length: 47496
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/uniforms/scout/data/camo1_co.webp"
+          },
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\uniforms\\scout\\data\\camo1_co.paa",
+            count: 23100,
+            positions: {
+              offset: 1455264,
+              length: 69300
+            },
+            normals: {
+              offset: 1732464,
+              length: 69300
+            },
+            uv: {
+              offset: 2009664,
+              length: 46200
+            },
+            arms: {
+              offset: 2194464,
+              length: 92400
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/uniforms/scout/data/camo1_co.webp"
+          }
+        ]
+      },
+      ls_vest_clone_arc: {
+        url: "./assets/armor/models/ls_vest_clone_arc.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\vests\\arc\\data\\camo1_co.paa",
+            count: 5700,
+            positions: {
+              offset: 0,
+              length: 17100
+            },
+            normals: {
+              offset: 68400,
+              length: 17100
+            },
+            uv: {
+              offset: 136800,
+              length: 11400
+            },
+            arms: {
+              offset: 182400,
+              length: 22800
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/vests/arc/data/camo1_co.webp"
+          },
+          {
+            slot: "camo2",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\vests\\arc\\data\\camo2_co.paa",
+            count: 9462,
+            positions: {
+              offset: 273600,
+              length: 28386
+            },
+            normals: {
+              offset: 387144,
+              length: 28386
+            },
+            uv: {
+              offset: 500688,
+              length: 18924
+            },
+            arms: {
+              offset: 576384,
+              length: 37848
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/vests/arc/data/camo2_co.webp"
+          },
+          {
+            slot: "camo3",
+            selections: [
+              "camo3"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\vests\\arc\\data\\camo3_co.paa",
+            count: 9138,
+            positions: {
+              offset: 727776,
+              length: 27414
+            },
+            normals: {
+              offset: 837432,
+              length: 27414
+            },
+            uv: {
+              offset: 947088,
+              length: 18276
+            },
+            arms: {
+              offset: 1020192,
+              length: 36552
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/vests/arc/data/camo3_co.webp"
+          }
+        ]
+      },
+      ls_cloneVest_gunner: {
+        url: "./assets/armor/models/ls_cloneVest_gunner.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\vests\\gunner\\data\\camo1_co.paa",
+            count: 11346,
+            positions: {
+              offset: 0,
+              length: 34038
+            },
+            normals: {
+              offset: 136152,
+              length: 34038
+            },
+            uv: {
+              offset: 272304,
+              length: 22692
+            },
+            arms: {
+              offset: 363072,
+              length: 45384
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/vests/gunner/data/camo1_co.webp"
+          },
+          {
+            slot: "camo2",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\vests\\gunner\\data\\camo2_co.paa",
+            count: 5148,
+            positions: {
+              offset: 544608,
+              length: 15444
+            },
+            normals: {
+              offset: 606384,
+              length: 15444
+            },
+            uv: {
+              offset: 668160,
+              length: 10296
+            },
+            arms: {
+              offset: 709344,
+              length: 20592
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/vests/gunner/data/camo2_co.webp"
+          }
+        ]
+      },
+      ls_vest_clone_kama: {
+        url: "./assets/armor/models/ls_vest_clone_kama.bin",
+        groups: [
+          {
+            slot: "kama",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\vests\\officer\\data\\kama_co.paa",
+            count: 2604,
+            positions: {
+              offset: 0,
+              length: 7812
+            },
+            normals: {
+              offset: 31248,
+              length: 7812
+            },
+            uv: {
+              offset: 62496,
+              length: 5208
+            },
+            arms: {
+              offset: 83328,
+              length: 10416
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/vests/officer/data/kama_co.webp"
+          }
+        ]
+      },
+      ls_vest_clone_lieutenant: {
+        url: "./assets/armor/models/ls_vest_clone_lieutenant.bin",
+        groups: [
+          {
+            slot: "ammo",
+            selections: [
+              "camo4"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\vests\\officer\\data\\ammo_co.paa",
+            count: 3870,
+            positions: {
+              offset: 0,
+              length: 11610
+            },
+            normals: {
+              offset: 46440,
+              length: 11610
+            },
+            uv: {
+              offset: 92880,
+              length: 7740
+            },
+            arms: {
+              offset: 123840,
+              length: 15480
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/vests/officer/data/ammo_co.webp"
+          },
+          {
+            slot: "bandolier",
+            selections: [],
+            texture: "ls\\core\\addons\\characters_clone\\vests\\officer\\data\\bandolier_co.paa",
+            count: 180,
+            positions: {
+              offset: 185760,
+              length: 540
+            },
+            normals: {
+              offset: 187920,
+              length: 540
+            },
+            uv: {
+              offset: 190080,
+              length: 360
+            },
+            arms: {
+              offset: 191520,
+              length: 720
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/vests/officer/data/bandolier_co.webp"
+          },
+          {
+            slot: "bandolier",
+            selections: [
+              "camo3"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\vests\\officer\\data\\bandolier_co.paa",
+            count: 1680,
+            positions: {
+              offset: 194400,
+              length: 5040
+            },
+            normals: {
+              offset: 214560,
+              length: 5040
+            },
+            uv: {
+              offset: 234720,
+              length: 3360
+            },
+            arms: {
+              offset: 248160,
+              length: 6720
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/vests/officer/data/bandolier_co.webp"
+          },
+          {
+            slot: "pauldron",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\vests\\officer\\data\\pauldron_co.paa",
+            count: 1656,
+            positions: {
+              offset: 275040,
+              length: 4968
+            },
+            normals: {
+              offset: 294912,
+              length: 4968
+            },
+            uv: {
+              offset: 314784,
+              length: 3312
+            },
+            arms: {
+              offset: 328032,
+              length: 6624
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/vests/officer/data/pauldron_co.webp"
+          }
+        ]
+      },
+      ls_vest_clone_officer: {
+        url: "./assets/armor/models/ls_vest_clone_officer.bin",
+        groups: [
+          {
+            slot: "ammo",
+            selections: [
+              "camo4"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\vests\\officer\\data\\ammo_co.paa",
+            count: 3870,
+            positions: {
+              offset: 0,
+              length: 11610
+            },
+            normals: {
+              offset: 46440,
+              length: 11610
+            },
+            uv: {
+              offset: 92880,
+              length: 7740
+            },
+            arms: {
+              offset: 123840,
+              length: 15480
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/vests/officer/data/ammo_co.webp"
+          },
+          {
+            slot: "bandolier",
+            selections: [],
+            texture: "ls\\core\\addons\\characters_clone\\vests\\officer\\data\\bandolier_co.paa",
+            count: 180,
+            positions: {
+              offset: 185760,
+              length: 540
+            },
+            normals: {
+              offset: 187920,
+              length: 540
+            },
+            uv: {
+              offset: 190080,
+              length: 360
+            },
+            arms: {
+              offset: 191520,
+              length: 720
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/vests/officer/data/bandolier_co.webp"
+          },
+          {
+            slot: "bandolier",
+            selections: [
+              "camo3"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\vests\\officer\\data\\bandolier_co.paa",
+            count: 1680,
+            positions: {
+              offset: 194400,
+              length: 5040
+            },
+            normals: {
+              offset: 214560,
+              length: 5040
+            },
+            uv: {
+              offset: 234720,
+              length: 3360
+            },
+            arms: {
+              offset: 248160,
+              length: 6720
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/vests/officer/data/bandolier_co.webp"
+          },
+          {
+            slot: "kama",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\vests\\officer\\data\\kama_co.paa",
+            count: 2604,
+            positions: {
+              offset: 275040,
+              length: 7812
+            },
+            normals: {
+              offset: 306288,
+              length: 7812
+            },
+            uv: {
+              offset: 337536,
+              length: 5208
+            },
+            arms: {
+              offset: 358368,
+              length: 10416
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/vests/officer/data/kama_co.webp"
+          },
+          {
+            slot: "pauldron",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\vests\\officer\\data\\pauldron_co.paa",
+            count: 1656,
+            positions: {
+              offset: 400032,
+              length: 4968
+            },
+            normals: {
+              offset: 419904,
+              length: 4968
+            },
+            uv: {
+              offset: 439776,
+              length: 3312
+            },
+            arms: {
+              offset: 453024,
+              length: 6624
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/vests/officer/data/pauldron_co.webp"
+          }
+        ]
+      },
+      ls_vest_clone_recon: {
+        url: "./assets/armor/models/ls_vest_clone_recon.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\vests\\recon\\data\\camo1_co.paa",
+            count: 2676,
+            positions: {
+              offset: 0,
+              length: 8028
+            },
+            normals: {
+              offset: 32112,
+              length: 8028
+            },
+            uv: {
+              offset: 64224,
+              length: 5352
+            },
+            arms: {
+              offset: 85632,
+              length: 10704
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/vests/recon/data/camo1_co.webp"
+          }
+        ]
+      },
+      ls_vest_clone_scout: {
+        url: "./assets/armor/models/ls_vest_clone_scout.bin",
+        groups: [
+          {
+            slot: "pouches",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone\\vests\\scout\\data\\pouches_co.paa",
+            count: 18222,
+            positions: {
+              offset: 0,
+              length: 54666
+            },
+            normals: {
+              offset: 218664,
+              length: 54666
+            },
+            uv: {
+              offset: 437328,
+              length: 36444
+            },
+            arms: {
+              offset: 583104,
+              length: 72888
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone/vests/scout/data/pouches_co.webp"
+          }
+        ]
+      },
+      ls_backpack_clone_commando: {
+        url: "./assets/armor/models/ls_backpack_clone_commando.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\backpacks\\commando\\data\\camo1_co.paa",
+            count: 1821,
+            positions: {
+              offset: 0,
+              length: 5463
+            },
+            normals: {
+              offset: 21852,
+              length: 5463
+            },
+            uv: {
+              offset: 43704,
+              length: 3642
+            },
+            arms: {
+              offset: 58272,
+              length: 7284
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/commando/data/camo1_co.webp"
+          },
+          {
+            slot: "camo1",
+            selections: [
+              "camo1",
+              "illum"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\backpacks\\commando\\data\\camo1_co.paa",
+            count: 27,
+            positions: {
+              offset: 87408,
+              length: 81
+            },
+            normals: {
+              offset: 87732,
+              length: 81
+            },
+            uv: {
+              offset: 88056,
+              length: 54
+            },
+            arms: {
+              offset: 88272,
+              length: 108
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/commando/data/camo1_co.webp"
+          }
+        ]
+      },
+      ls_backpack_clone_commando_eod: {
+        url: "./assets/armor/models/ls_backpack_clone_commando_eod.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\backpacks\\commando\\data\\camo1_co.paa",
+            count: 4800,
+            positions: {
+              offset: 0,
+              length: 14400
+            },
+            normals: {
+              offset: 57600,
+              length: 14400
+            },
+            uv: {
+              offset: 115200,
+              length: 9600
+            },
+            arms: {
+              offset: 153600,
+              length: 19200
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/commando/data/camo1_co.webp"
+          },
+          {
+            slot: "camo1",
+            selections: [
+              "camo1",
+              "illum"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\backpacks\\commando\\data\\camo1_co.paa",
+            count: 228,
+            positions: {
+              offset: 230400,
+              length: 684
+            },
+            normals: {
+              offset: 233136,
+              length: 684
+            },
+            uv: {
+              offset: 235872,
+              length: 456
+            },
+            arms: {
+              offset: 237696,
+              length: 912
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/commando/data/camo1_co.webp"
+          }
+        ]
+      },
+      ls_backpack_clone_commando_rto: {
+        url: "./assets/armor/models/ls_backpack_clone_commando_rto.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\backpacks\\commando\\data\\camo1_co.paa",
+            count: 3156,
+            positions: {
+              offset: 0,
+              length: 9468
+            },
+            normals: {
+              offset: 37872,
+              length: 9468
+            },
+            uv: {
+              offset: 75744,
+              length: 6312
+            },
+            arms: {
+              offset: 100992,
+              length: 12624
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/commando/data/camo1_co.webp"
+          },
+          {
+            slot: "camo1",
+            selections: [
+              "camo1",
+              "illum"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\backpacks\\commando\\data\\camo1_co.paa",
+            count: 198,
+            positions: {
+              offset: 151488,
+              length: 594
+            },
+            normals: {
+              offset: 153864,
+              length: 594
+            },
+            uv: {
+              offset: 156240,
+              length: 396
+            },
+            arms: {
+              offset: 157824,
+              length: 792
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/commando/data/camo1_co.webp"
+          }
+        ]
+      },
+      ls_backpack_clone_commando_tech: {
+        url: "./assets/armor/models/ls_backpack_clone_commando_tech.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\backpacks\\commando\\data\\camo1_co.paa",
+            count: 1812,
+            positions: {
+              offset: 0,
+              length: 5436
+            },
+            normals: {
+              offset: 21744,
+              length: 5436
+            },
+            uv: {
+              offset: 43488,
+              length: 3624
+            },
+            arms: {
+              offset: 57984,
+              length: 7248
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/commando/data/camo1_co.webp"
+          },
+          {
+            slot: "camo1",
+            selections: [
+              "camo1",
+              "illum"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\backpacks\\commando\\data\\camo1_co.paa",
+            count: 36,
+            positions: {
+              offset: 86976,
+              length: 108
+            },
+            normals: {
+              offset: 87408,
+              length: 108
+            },
+            uv: {
+              offset: 87840,
+              length: 72
+            },
+            arms: {
+              offset: 88128,
+              length: 144
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/commando/data/camo1_co.webp"
+          },
+          {
+            slot: "camo2_tech",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\backpacks\\commando\\data\\camo2_tech_co.paa",
+            count: 3231,
+            positions: {
+              offset: 88704,
+              length: 9693
+            },
+            normals: {
+              offset: 127476,
+              length: 9693
+            },
+            uv: {
+              offset: 166248,
+              length: 6462
+            },
+            arms: {
+              offset: 192096,
+              length: 12924
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/commando/data/camo2_tech_co.webp"
+          },
+          {
+            slot: "camo2_tech",
+            selections: [
+              "camo2",
+              "illum"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\backpacks\\commando\\data\\camo2_tech_co.paa",
+            count: 96,
+            positions: {
+              offset: 243792,
+              length: 288
+            },
+            normals: {
+              offset: 244944,
+              length: 288
+            },
+            uv: {
+              offset: 246096,
+              length: 192
+            },
+            arms: {
+              offset: 246864,
+              length: 384
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/commando/data/camo2_tech_co.webp"
+          }
+        ]
+      },
+      ls_gar_heavy_backpack: {
+        url: "./assets/armor/models/ls_gar_heavy_backpack.bin",
+        groups: [
+          {
+            slot: "backpack",
+            selections: [
+              "backpack"
+            ],
+            texture: "",
+            count: 1680,
+            positions: {
+              offset: 0,
+              length: 5040
+            },
+            normals: {
+              offset: 20160,
+              length: 5040
+            },
+            uv: {
+              offset: 40320,
+              length: 3360
+            },
+            arms: {
+              offset: 53760,
+              length: 6720
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/backpack_co.webp"
+          },
+          {
+            slot: "cover",
+            selections: [
+              "cover"
+            ],
+            texture: "",
+            count: 1176,
+            positions: {
+              offset: 80640,
+              length: 3528
+            },
+            normals: {
+              offset: 94752,
+              length: 3528
+            },
+            uv: {
+              offset: 108864,
+              length: 2352
+            },
+            arms: {
+              offset: 118272,
+              length: 4704
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/cover_co.webp"
+          },
+          {
+            slot: "bags",
+            selections: [
+              "pouches"
+            ],
+            texture: "",
+            count: 8430,
+            positions: {
+              offset: 137088,
+              length: 25290
+            },
+            normals: {
+              offset: 238248,
+              length: 25290
+            },
+            uv: {
+              offset: 339408,
+              length: 16860
+            },
+            arms: {
+              offset: 406848,
+              length: 33720
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/pouches_co.webp"
+          },
+          {
+            slot: "tube",
+            selections: [
+              "tube"
+            ],
+            texture: "",
+            count: 948,
+            positions: {
+              offset: 541728,
+              length: 2844
+            },
+            normals: {
+              offset: 553104,
+              length: 2844
+            },
+            uv: {
+              offset: 564480,
+              length: 1896
+            },
+            arms: {
+              offset: 572064,
+              length: 3792
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/tube_co.webp"
+          }
+        ]
+      },
+      ls_gar_heavyMedic_backpack: {
+        url: "./assets/armor/models/ls_gar_heavyMedic_backpack.bin",
+        groups: [
+          {
+            slot: "backpack",
+            selections: [
+              "backpack"
+            ],
+            texture: "",
+            count: 1680,
+            positions: {
+              offset: 0,
+              length: 5040
+            },
+            normals: {
+              offset: 20160,
+              length: 5040
+            },
+            uv: {
+              offset: 40320,
+              length: 3360
+            },
+            arms: {
+              offset: 53760,
+              length: 6720
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/backpack_medic_co.webp"
+          },
+          {
+            slot: "cover",
+            selections: [
+              "cover"
+            ],
+            texture: "",
+            count: 1176,
+            positions: {
+              offset: 80640,
+              length: 3528
+            },
+            normals: {
+              offset: 94752,
+              length: 3528
+            },
+            uv: {
+              offset: 108864,
+              length: 2352
+            },
+            arms: {
+              offset: 118272,
+              length: 4704
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/cover_co.webp"
+          },
+          {
+            slot: "medic1",
+            selections: [
+              "medic1"
+            ],
+            texture: "",
+            count: 288,
+            positions: {
+              offset: 137088,
+              length: 864
+            },
+            normals: {
+              offset: 140544,
+              length: 864
+            },
+            uv: {
+              offset: 144e3,
+              length: 576
+            },
+            arms: {
+              offset: 146304,
+              length: 1152
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/medic_co.webp"
+          },
+          {
+            slot: "medic2",
+            selections: [
+              "medic2"
+            ],
+            texture: "",
+            count: 1092,
+            positions: {
+              offset: 150912,
+              length: 3276
+            },
+            normals: {
+              offset: 164016,
+              length: 3276
+            },
+            uv: {
+              offset: 177120,
+              length: 2184
+            },
+            arms: {
+              offset: 185856,
+              length: 4368
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/medic_co.webp"
+          },
+          {
+            slot: "bags",
+            selections: [
+              "pouches"
+            ],
+            texture: "",
+            count: 8430,
+            positions: {
+              offset: 203328,
+              length: 25290
+            },
+            normals: {
+              offset: 304488,
+              length: 25290
+            },
+            uv: {
+              offset: 405648,
+              length: 16860
+            },
+            arms: {
+              offset: 473088,
+              length: 33720
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/pouches_co.webp"
+          }
+        ]
+      },
+      ls_backpack_clone_marine: {
+        url: "./assets/armor/models/ls_backpack_clone_marine.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\backpacks\\marine\\data\\camo1_co.paa",
+            count: 12924,
+            positions: {
+              offset: 0,
+              length: 38772
+            },
+            normals: {
+              offset: 155088,
+              length: 38772
+            },
+            uv: {
+              offset: 310176,
+              length: 25848
+            },
+            arms: {
+              offset: 413568,
+              length: 51696
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/marine/data/camo1_co.webp"
+          }
+        ]
+      },
+      ls_gar_medium_backpack: {
+        url: "./assets/armor/models/ls_gar_medium_backpack.bin",
+        groups: [
+          {
+            slot: "backpack",
+            selections: [
+              "backpack"
+            ],
+            texture: "",
+            count: 1680,
+            positions: {
+              offset: 0,
+              length: 5040
+            },
+            normals: {
+              offset: 20160,
+              length: 5040
+            },
+            uv: {
+              offset: 40320,
+              length: 3360
+            },
+            arms: {
+              offset: 53760,
+              length: 6720
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/backpack_co.webp"
+          },
+          {
+            slot: "cover",
+            selections: [
+              "cover"
+            ],
+            texture: "",
+            count: 1176,
+            positions: {
+              offset: 80640,
+              length: 3528
+            },
+            normals: {
+              offset: 94752,
+              length: 3528
+            },
+            uv: {
+              offset: 108864,
+              length: 2352
+            },
+            arms: {
+              offset: 118272,
+              length: 4704
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/cover_co.webp"
+          },
+          {
+            slot: "bags",
+            selections: [
+              "pouches"
+            ],
+            texture: "",
+            count: 8430,
+            positions: {
+              offset: 137088,
+              length: 25290
+            },
+            normals: {
+              offset: 238248,
+              length: 25290
+            },
+            uv: {
+              offset: 339408,
+              length: 16860
+            },
+            arms: {
+              offset: 406848,
+              length: 33720
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/pouches_co.webp"
+          }
+        ]
+      },
+      ls_gar_mediumRadio_backpack: {
+        url: "./assets/armor/models/ls_gar_mediumRadio_backpack.bin",
+        groups: [
+          {
+            slot: "backpack",
+            selections: [
+              "backpack"
+            ],
+            texture: "",
+            count: 1680,
+            positions: {
+              offset: 0,
+              length: 5040
+            },
+            normals: {
+              offset: 20160,
+              length: 5040
+            },
+            uv: {
+              offset: 40320,
+              length: 3360
+            },
+            arms: {
+              offset: 53760,
+              length: 6720
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/backpack_co.webp"
+          },
+          {
+            slot: "bags",
+            selections: [
+              "pouches"
+            ],
+            texture: "",
+            count: 8430,
+            positions: {
+              offset: 80640,
+              length: 25290
+            },
+            normals: {
+              offset: 181800,
+              length: 25290
+            },
+            uv: {
+              offset: 282960,
+              length: 16860
+            },
+            arms: {
+              offset: 350400,
+              length: 33720
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/pouches_co.webp"
+          },
+          {
+            slot: "radio",
+            selections: [
+              "radio"
+            ],
+            texture: "",
+            count: 1401,
+            positions: {
+              offset: 485280,
+              length: 4203
+            },
+            normals: {
+              offset: 502092,
+              length: 4203
+            },
+            uv: {
+              offset: 518904,
+              length: 2802
+            },
+            arms: {
+              offset: 530112,
+              length: 5604
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/radio_co.webp"
+          },
+          {
+            slot: "screen",
+            selections: [
+              "screen"
+            ],
+            texture: "",
+            count: 18,
+            positions: {
+              offset: 552528,
+              length: 54
+            },
+            normals: {
+              offset: 552744,
+              length: 54
+            },
+            uv: {
+              offset: 552960,
+              length: 36
+            },
+            arms: {
+              offset: 553104,
+              length: 72
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/screen_co.webp"
+          }
+        ]
+      },
+      ls_mynock_backpack: {
+        url: "./assets/armor/models/ls_mynock_backpack.bin",
+        groups: [
+          {
+            slot: "pack",
+            selections: [
+              "pack"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\backpacks\\mynock\\data\\pack_co.paa",
+            count: 5892,
+            positions: {
+              offset: 0,
+              length: 17676
+            },
+            normals: {
+              offset: 70704,
+              length: 17676
+            },
+            uv: {
+              offset: 141408,
+              length: 11784
+            },
+            arms: {
+              offset: 188544,
+              length: 23568
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/mynock/data/pack_co.webp"
+          },
+          {
+            slot: "wing",
+            selections: [
+              "wing"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\backpacks\\mynock\\data\\wing_co.paa",
+            count: 44379,
+            positions: {
+              offset: 282816,
+              length: 133137
+            },
+            normals: {
+              offset: 815364,
+              length: 133137
+            },
+            uv: {
+              offset: 1347912,
+              length: 88758
+            },
+            arms: {
+              offset: 1702944,
+              length: 177516
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/mynock/data/wing_co.webp"
+          }
+        ]
+      },
+      ls_gar_medic_backpack: {
+        url: "./assets/armor/models/ls_gar_medic_backpack.bin",
+        groups: [
+          {
+            slot: "backpack",
+            selections: [
+              "backpack"
+            ],
+            texture: "",
+            count: 1680,
+            positions: {
+              offset: 0,
+              length: 5040
+            },
+            normals: {
+              offset: 20160,
+              length: 5040
+            },
+            uv: {
+              offset: 40320,
+              length: 3360
+            },
+            arms: {
+              offset: 53760,
+              length: 6720
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/backpack_medic_co.webp"
+          },
+          {
+            slot: "cover",
+            selections: [
+              "cover"
+            ],
+            texture: "",
+            count: 1176,
+            positions: {
+              offset: 80640,
+              length: 3528
+            },
+            normals: {
+              offset: 94752,
+              length: 3528
+            },
+            uv: {
+              offset: 108864,
+              length: 2352
+            },
+            arms: {
+              offset: 118272,
+              length: 4704
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/cover_co.webp"
+          },
+          {
+            slot: "medic1",
+            selections: [
+              "medic1"
+            ],
+            texture: "",
+            count: 288,
+            positions: {
+              offset: 137088,
+              length: 864
+            },
+            normals: {
+              offset: 140544,
+              length: 864
+            },
+            uv: {
+              offset: 144e3,
+              length: 576
+            },
+            arms: {
+              offset: 146304,
+              length: 1152
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/medic_co.webp"
+          },
+          {
+            slot: "medic2",
+            selections: [
+              "medic2"
+            ],
+            texture: "",
+            count: 1092,
+            positions: {
+              offset: 150912,
+              length: 3276
+            },
+            normals: {
+              offset: 164016,
+              length: 3276
+            },
+            uv: {
+              offset: 177120,
+              length: 2184
+            },
+            arms: {
+              offset: 185856,
+              length: 4368
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/medic_co.webp"
+          }
+        ]
+      },
+      ls_gar_radio_backpack: {
+        url: "./assets/armor/models/ls_gar_radio_backpack.bin",
+        groups: [
+          {
+            slot: "backpack",
+            selections: [
+              "backpack"
+            ],
+            texture: "",
+            count: 1680,
+            positions: {
+              offset: 0,
+              length: 5040
+            },
+            normals: {
+              offset: 20160,
+              length: 5040
+            },
+            uv: {
+              offset: 40320,
+              length: 3360
+            },
+            arms: {
+              offset: 53760,
+              length: 6720
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/backpack_co.webp"
+          },
+          {
+            slot: "radio",
+            selections: [
+              "radio"
+            ],
+            texture: "",
+            count: 1401,
+            positions: {
+              offset: 80640,
+              length: 4203
+            },
+            normals: {
+              offset: 97452,
+              length: 4203
+            },
+            uv: {
+              offset: 114264,
+              length: 2802
+            },
+            arms: {
+              offset: 125472,
+              length: 5604
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/radio_co.webp"
+          },
+          {
+            slot: "screen",
+            selections: [
+              "screen"
+            ],
+            texture: "",
+            count: 18,
+            positions: {
+              offset: 147888,
+              length: 54
+            },
+            normals: {
+              offset: 148104,
+              length: 54
+            },
+            uv: {
+              offset: 148320,
+              length: 36
+            },
+            arms: {
+              offset: 148464,
+              length: 72
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/screen_co.webp"
+          }
+        ]
+      },
+      ls_gar_rocket_backpack: {
+        url: "./assets/armor/models/ls_gar_rocket_backpack.bin",
+        groups: [
+          {
+            slot: "backpack",
+            selections: [
+              "backpack"
+            ],
+            texture: "",
+            count: 1680,
+            positions: {
+              offset: 0,
+              length: 5040
+            },
+            normals: {
+              offset: 20160,
+              length: 5040
+            },
+            uv: {
+              offset: 40320,
+              length: 3360
+            },
+            arms: {
+              offset: 53760,
+              length: 6720
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/backpack_eod_co.webp"
+          },
+          {
+            slot: "holder",
+            selections: [
+              "holder"
+            ],
+            texture: "",
+            count: 1368,
+            positions: {
+              offset: 80640,
+              length: 4104
+            },
+            normals: {
+              offset: 97056,
+              length: 4104
+            },
+            uv: {
+              offset: 113472,
+              length: 2736
+            },
+            arms: {
+              offset: 124416,
+              length: 5472
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/holder_co.webp"
+          },
+          {
+            slot: "light",
+            selections: [
+              "light"
+            ],
+            texture: "",
+            count: 768,
+            positions: {
+              offset: 146304,
+              length: 2304
+            },
+            normals: {
+              offset: 155520,
+              length: 2304
+            },
+            uv: {
+              offset: 164736,
+              length: 1536
+            },
+            arms: {
+              offset: 170880,
+              length: 3072
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/light_co.webp"
+          },
+          {
+            slot: "bags",
+            selections: [
+              "pouches"
+            ],
+            texture: "",
+            count: 8430,
+            positions: {
+              offset: 183168,
+              length: 25290
+            },
+            normals: {
+              offset: 284328,
+              length: 25290
+            },
+            uv: {
+              offset: 385488,
+              length: 16860
+            },
+            arms: {
+              offset: 452928,
+              length: 33720
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/pouches_co.webp"
+          },
+          {
+            slot: "rocket",
+            selections: [
+              "rocket"
+            ],
+            texture: "",
+            count: 8064,
+            positions: {
+              offset: 587808,
+              length: 24192
+            },
+            normals: {
+              offset: 684576,
+              length: 24192
+            },
+            uv: {
+              offset: 781344,
+              length: 16128
+            },
+            arms: {
+              offset: 845856,
+              length: 32256
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/rocket_co.webp"
+          }
+        ]
+      },
+      ls_gar_standard_backpack: {
+        url: "./assets/armor/models/ls_gar_standard_backpack.bin",
+        groups: [
+          {
+            slot: "backpack",
+            selections: [
+              "backpack"
+            ],
+            texture: "",
+            count: 1680,
+            positions: {
+              offset: 0,
+              length: 5040
+            },
+            normals: {
+              offset: 20160,
+              length: 5040
+            },
+            uv: {
+              offset: 40320,
+              length: 3360
+            },
+            arms: {
+              offset: 53760,
+              length: 6720
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/backpack_co.webp"
+          },
+          {
+            slot: "cover",
+            selections: [
+              "cover"
+            ],
+            texture: "",
+            count: 1176,
+            positions: {
+              offset: 80640,
+              length: 3528
+            },
+            normals: {
+              offset: 94752,
+              length: 3528
+            },
+            uv: {
+              offset: 108864,
+              length: 2352
+            },
+            arms: {
+              offset: 118272,
+              length: 4704
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/cover_co.webp"
+          }
+        ]
+      },
+      ls_backpack_clone_survival: {
+        url: "./assets/armor/models/ls_backpack_clone_survival.bin",
+        groups: [
+          {
+            slot: "box_medic",
+            selections: [
+              "medic"
+            ],
+            texture: "",
+            count: 192,
+            positions: {
+              offset: 0,
+              length: 576
+            },
+            normals: {
+              offset: 2304,
+              length: 576
+            },
+            uv: {
+              offset: 4608,
+              length: 384
+            },
+            arms: {
+              offset: 6144,
+              length: 768
+            },
+            defaultMap: null
+          },
+          {
+            slot: "box",
+            selections: [],
+            texture: "",
+            count: 432,
+            positions: {
+              offset: 9216,
+              length: 1296
+            },
+            normals: {
+              offset: 14400,
+              length: 1296
+            },
+            uv: {
+              offset: 19584,
+              length: 864
+            },
+            arms: {
+              offset: 23040,
+              length: 1728
+            },
+            defaultMap: null
+          },
+          {
+            slot: "antenna",
+            selections: [],
+            texture: "",
+            count: 2550,
+            positions: {
+              offset: 29952,
+              length: 7650
+            },
+            normals: {
+              offset: 60552,
+              length: 7650
+            },
+            uv: {
+              offset: 91152,
+              length: 5100
+            },
+            arms: {
+              offset: 111552,
+              length: 10200
+            },
+            defaultMap: null
+          },
+          {
+            slot: "backpack",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\backpacks\\survival\\data\\backpack_co.paa",
+            count: 23754,
+            positions: {
+              offset: 152352,
+              length: 71262
+            },
+            normals: {
+              offset: 437400,
+              length: 71262
+            },
+            uv: {
+              offset: 722448,
+              length: 47508
+            },
+            arms: {
+              offset: 912480,
+              length: 95016
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/survival/data/backpack_co.webp"
+          }
+        ]
+      },
+      lsd_gar_arfAntenna: {
+        url: "./assets/armor/models/lsd_gar_arfAntenna.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\equipment\\arfantenna\\data\\camo1_co.paa",
+            count: 510,
+            positions: {
+              offset: 0,
+              length: 1530
+            },
+            normals: {
+              offset: 6120,
+              length: 1530
+            },
+            uv: {
+              offset: 12240,
+              length: 1020
+            },
+            arms: {
+              offset: 16320,
+              length: 2040
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/equipment/arfantenna/data/camo1_co.webp"
+          }
+        ]
+      },
+      lsd_gar_arfFlaps: {
+        url: "./assets/armor/models/lsd_gar_arfFlaps.bin",
+        groups: [
+          {
+            slot: "camo2",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\helmets\\arf\\data\\camo2_co.paa",
+            count: 3096,
+            positions: {
+              offset: 0,
+              length: 9288
+            },
+            normals: {
+              offset: 37152,
+              length: 9288
+            },
+            uv: {
+              offset: 74304,
+              length: 6192
+            },
+            arms: {
+              offset: 99072,
+              length: 12384
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/arf/data/camo2_co.webp"
+          }
+        ]
+      },
+      lsd_gar_arfFlapsAntenna: {
+        url: "./assets/armor/models/lsd_gar_arfFlapsAntenna.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\equipment\\arfantenna\\data\\camo1_co.paa",
+            count: 510,
+            positions: {
+              offset: 0,
+              length: 1530
+            },
+            normals: {
+              offset: 6120,
+              length: 1530
+            },
+            uv: {
+              offset: 12240,
+              length: 1020
+            },
+            arms: {
+              offset: 16320,
+              length: 2040
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/equipment/arfantenna/data/camo1_co.webp"
+          },
+          {
+            slot: "camo2",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\helmets\\arf\\data\\camo2_co.paa",
+            count: 3096,
+            positions: {
+              offset: 24480,
+              length: 9288
+            },
+            normals: {
+              offset: 61632,
+              length: 9288
+            },
+            uv: {
+              offset: 98784,
+              length: 6192
+            },
+            arms: {
+              offset: 123552,
+              length: 12384
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/arf/data/camo2_co.webp"
+          }
+        ]
+      },
+      lsd_gar_commander_optic: {
+        url: "./assets/armor/models/lsd_gar_commander_optic.bin",
+        groups: [
+          {
+            slot: "",
+            selections: [],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\equipment\\nvgs\\commander\\data\\optic_ca.paa",
+            count: 6,
+            positions: {
+              offset: 0,
+              length: 18
+            },
+            normals: {
+              offset: 72,
+              length: 18
+            },
+            uv: {
+              offset: 144,
+              length: 12
+            },
+            arms: {
+              offset: 192,
+              length: 24
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/equipment/nvgs/commander/data/optic_ca.webp"
+          }
+        ]
+      },
+      lsd_gar_p1Commander_nvg: {
+        url: "./assets/armor/models/lsd_gar_p1Commander_nvg.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\equipment\\nvgs\\common\\camo1_co.paa",
+            count: 1674,
+            positions: {
+              offset: 0,
+              length: 5022
+            },
+            normals: {
+              offset: 20088,
+              length: 5022
+            },
+            uv: {
+              offset: 40176,
+              length: 3348
+            },
+            arms: {
+              offset: 53568,
+              length: 6696
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/equipment/nvgs/common/camo1_co.webp"
+          },
+          {
+            slot: "camo1",
+            selections: [
+              "camo3"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\equipment\\nvgs\\common\\camo1_co.paa",
+            count: 5172,
+            positions: {
+              offset: 80352,
+              length: 15516
+            },
+            normals: {
+              offset: 142416,
+              length: 15516
+            },
+            uv: {
+              offset: 204480,
+              length: 10344
+            },
+            arms: {
+              offset: 245856,
+              length: 20688
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/equipment/nvgs/common/camo1_co.webp"
+          },
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\equipment\\nvgs\\common\\camo1_co.paa",
+            count: 780,
+            positions: {
+              offset: 328608,
+              length: 2340
+            },
+            normals: {
+              offset: 337968,
+              length: 2340
+            },
+            uv: {
+              offset: 347328,
+              length: 1560
+            },
+            arms: {
+              offset: 353568,
+              length: 3120
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/equipment/nvgs/common/camo1_co.webp"
+          }
+        ]
+      },
+      ls_nvg_clone_commando_antenna: {
+        url: "./assets/armor/models/ls_nvg_clone_commando_antenna.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\helmets\\commando\\data\\camo1_co.paa",
+            count: 1446,
+            positions: {
+              offset: 0,
+              length: 4338
+            },
+            normals: {
+              offset: 17352,
+              length: 4338
+            },
+            uv: {
+              offset: 34704,
+              length: 2892
+            },
+            arms: {
+              offset: 46272,
+              length: 5784
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/commando/data/camo1_co.webp"
+          }
+        ]
+      },
+      ls_nvg_clone_commando_visor: {
+        url: "./assets/armor/models/ls_nvg_clone_commando_visor.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\helmets\\commando\\data\\camo1_co.paa",
+            count: 516,
+            positions: {
+              offset: 0,
+              length: 1548
+            },
+            normals: {
+              offset: 6192,
+              length: 1548
+            },
+            uv: {
+              offset: 12384,
+              length: 1032
+            },
+            arms: {
+              offset: 16512,
+              length: 2064
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/commando/data/camo1_co.webp"
+          },
+          {
+            slot: "camo1",
+            selections: [
+              "camo1",
+              "illum"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\helmets\\commando\\data\\camo1_co.paa",
+            count: 60,
+            positions: {
+              offset: 24768,
+              length: 180
+            },
+            normals: {
+              offset: 25488,
+              length: 180
+            },
+            uv: {
+              offset: 26208,
+              length: 120
+            },
+            arms: {
+              offset: 26688,
+              length: 240
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/commando/data/camo1_co.webp"
+          }
+        ]
+      },
+      lsd_gar_p1Rangefinder_nvg_off: {
+        url: "./assets/armor/models/lsd_gar_p1Rangefinder_nvg_off.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\data\\textures\\hologram\\bluehologram_ca.paa",
+            count: 606,
+            positions: {
+              offset: 0,
+              length: 1818
+            },
+            normals: {
+              offset: 7272,
+              length: 1818
+            },
+            uv: {
+              offset: 14544,
+              length: 1212
+            },
+            arms: {
+              offset: 19392,
+              length: 2424
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/equipment/nvgs/common/camo1_co.webp"
+          }
+        ]
+      },
+      lsd_gar_p1Rangefinder_nvg_on: {
+        url: "./assets/armor/models/lsd_gar_p1Rangefinder_nvg_on.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\data\\textures\\hologram\\bluehologram_ca.paa",
+            count: 606,
+            positions: {
+              offset: 0,
+              length: 1818
+            },
+            normals: {
+              offset: 7272,
+              length: 1818
+            },
+            uv: {
+              offset: 14544,
+              length: 1212
+            },
+            arms: {
+              offset: 19392,
+              length: 2424
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/equipment/nvgs/common/camo1_co.webp"
+          }
+        ]
+      },
+      lsd_gar_rangefinder_optic: {
+        url: "./assets/armor/models/lsd_gar_rangefinder_optic.bin",
+        groups: [
+          {
+            slot: "",
+            selections: [],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\equipment\\nvgs\\rangefinder\\data\\optic_ca.paa",
+            count: 6,
+            positions: {
+              offset: 0,
+              length: 18
+            },
+            normals: {
+              offset: 72,
+              length: 18
+            },
+            uv: {
+              offset: 144,
+              length: 12
+            },
+            arms: {
+              offset: 192,
+              length: 24
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/equipment/nvgs/rangefinder/data/optic_ca.webp"
+          }
+        ]
+      },
+      ls_gar_recon_nvg_off: {
+        url: "./assets/armor/models/ls_gar_recon_nvg_off.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\equipment\\nvgs\\common\\camo1_co.paa",
+            count: 1674,
+            positions: {
+              offset: 0,
+              length: 5022
+            },
+            normals: {
+              offset: 20088,
+              length: 5022
+            },
+            uv: {
+              offset: 40176,
+              length: 3348
+            },
+            arms: {
+              offset: 53568,
+              length: 6696
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/equipment/nvgs/common/camo1_co.webp"
+          },
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\equipment\\nvgs\\common\\camo1_co.paa",
+            count: 606,
+            positions: {
+              offset: 80352,
+              length: 1818
+            },
+            normals: {
+              offset: 87624,
+              length: 1818
+            },
+            uv: {
+              offset: 94896,
+              length: 1212
+            },
+            arms: {
+              offset: 99744,
+              length: 2424
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/equipment/nvgs/common/camo1_co.webp"
+          }
+        ]
+      },
+      ls_gar_recon_nvg_on: {
+        url: "./assets/armor/models/ls_gar_recon_nvg_on.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\equipment\\nvgs\\common\\camo1_co.paa",
+            count: 1674,
+            positions: {
+              offset: 0,
+              length: 5022
+            },
+            normals: {
+              offset: 20088,
+              length: 5022
+            },
+            uv: {
+              offset: 40176,
+              length: 3348
+            },
+            arms: {
+              offset: 53568,
+              length: 6696
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/equipment/nvgs/common/camo1_co.webp"
+          },
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\equipment\\nvgs\\common\\camo1_co.paa",
+            count: 606,
+            positions: {
+              offset: 80352,
+              length: 1818
+            },
+            normals: {
+              offset: 87624,
+              length: 1818
+            },
+            uv: {
+              offset: 94896,
+              length: 1212
+            },
+            arms: {
+              offset: 99744,
+              length: 2424
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/equipment/nvgs/common/camo1_co.webp"
+          }
+        ]
+      },
+      lsd_gar_nvg_optic: {
+        url: "./assets/armor/models/lsd_gar_nvg_optic.bin",
+        groups: [
+          {
+            slot: "",
+            selections: [],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\equipment\\nvgs\\visor\\data\\optic_ca.paa",
+            count: 6,
+            positions: {
+              offset: 0,
+              length: 18
+            },
+            normals: {
+              offset: 72,
+              length: 18
+            },
+            uv: {
+              offset: 144,
+              length: 12
+            },
+            arms: {
+              offset: 192,
+              length: 24
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/equipment/nvgs/visor/data/optic_ca.webp"
+          }
+        ]
+      },
+      lsd_gar_p1Visor_nvg_off: {
+        url: "./assets/armor/models/lsd_gar_p1Visor_nvg_off.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\equipment\\nvgs\\common\\camo1_co.paa",
+            count: 1674,
+            positions: {
+              offset: 0,
+              length: 5022
+            },
+            normals: {
+              offset: 20088,
+              length: 5022
+            },
+            uv: {
+              offset: 40176,
+              length: 3348
+            },
+            arms: {
+              offset: 53568,
+              length: 6696
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/equipment/nvgs/common/camo1_co.webp"
+          },
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\equipment\\nvgs\\common\\camo1_co.paa",
+            count: 1164,
+            positions: {
+              offset: 80352,
+              length: 3492
+            },
+            normals: {
+              offset: 94320,
+              length: 3492
+            },
+            uv: {
+              offset: 108288,
+              length: 2328
+            },
+            arms: {
+              offset: 117600,
+              length: 4656
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/equipment/nvgs/common/camo1_co.webp"
+          }
+        ]
+      },
+      lsd_gar_p1Visor_nvg_on: {
+        url: "./assets/armor/models/lsd_gar_p1Visor_nvg_on.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\equipment\\nvgs\\common\\camo1_co.paa",
+            count: 1674,
+            positions: {
+              offset: 0,
+              length: 5022
+            },
+            normals: {
+              offset: 20088,
+              length: 5022
+            },
+            uv: {
+              offset: 40176,
+              length: 3348
+            },
+            arms: {
+              offset: 53568,
+              length: 6696
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/equipment/nvgs/common/camo1_co.webp"
+          },
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\equipment\\nvgs\\common\\camo1_co.paa",
+            count: 1152,
+            positions: {
+              offset: 80352,
+              length: 3456
+            },
+            normals: {
+              offset: 94176,
+              length: 3456
+            },
+            uv: {
+              offset: 108e3,
+              length: 2304
+            },
+            arms: {
+              offset: 117216,
+              length: 4608
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/equipment/nvgs/common/camo1_co.webp"
+          }
+        ]
+      },
+      ls_helmet_clone_atrt: {
+        url: "./assets/armor/models/ls_helmet_clone_atrt.bin",
+        groups: [
+          {
+            slot: "antenna",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\helmets\\atrt\\data\\antenna_co.paa",
+            count: 1398,
+            positions: {
+              offset: 0,
+              length: 4194
+            },
+            normals: {
+              offset: 16776,
+              length: 4194
+            },
+            uv: {
+              offset: 33552,
+              length: 2796
+            },
+            arms: {
+              offset: 44736,
+              length: 5592
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/atrt/data/antenna_co.webp"
+          },
+          {
+            slot: "helmet",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\helmets\\atrt\\data\\helmet_atrt_co.paa",
+            count: 17586,
+            positions: {
+              offset: 67104,
+              length: 52758
+            },
+            normals: {
+              offset: 278136,
+              length: 52758
+            },
+            uv: {
+              offset: 489168,
+              length: 35172
+            },
+            arms: {
+              offset: 629856,
+              length: 70344
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/atrt/data/helmet_atrt_co.webp"
+          }
+        ]
+      },
+      ls_helmet_clone_cadet: {
+        url: "./assets/armor/models/ls_helmet_clone_cadet.bin",
+        groups: [
+          {
+            slot: "visor",
+            selections: [
+              "visor"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\helmets\\cadet\\data\\visor_co.paa",
+            count: 732,
+            positions: {
+              offset: 0,
+              length: 2196
+            },
+            normals: {
+              offset: 8784,
+              length: 2196
+            },
+            uv: {
+              offset: 17568,
+              length: 1464
+            },
+            arms: {
+              offset: 23424,
+              length: 2928
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/cadet/data/visor_ca.webp"
+          },
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\helmets\\cadet\\data\\camo1_co.paa",
+            count: 7110,
+            positions: {
+              offset: 35136,
+              length: 21330
+            },
+            normals: {
+              offset: 120456,
+              length: 21330
+            },
+            uv: {
+              offset: 205776,
+              length: 14220
+            },
+            arms: {
+              offset: 262656,
+              length: 28440
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/cadet/data/camo1_co.webp"
+          }
+        ]
+      },
+      ls_helmet_clone_commando: {
+        url: "./assets/armor/models/ls_helmet_clone_commando.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\helmets\\commando\\data\\camo1_co.paa",
+            count: 4185,
+            positions: {
+              offset: 0,
+              length: 12555
+            },
+            normals: {
+              offset: 50220,
+              length: 12555
+            },
+            uv: {
+              offset: 100440,
+              length: 8370
+            },
+            arms: {
+              offset: 133920,
+              length: 16740
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/commando/data/camo1_co.webp"
+          },
+          {
+            slot: "camo1",
+            selections: [
+              "camo1",
+              "illum"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\helmets\\commando\\data\\camo1_co.paa",
+            count: 216,
+            positions: {
+              offset: 200880,
+              length: 648
+            },
+            normals: {
+              offset: 203472,
+              length: 648
+            },
+            uv: {
+              offset: 206064,
+              length: 432
+            },
+            arms: {
+              offset: 207792,
+              length: 864
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/commando/data/camo1_co.webp"
+          }
+        ]
+      },
+      ls_sob_crosshair_helmet: {
+        url: "./assets/armor/models/ls_sob_crosshair_helmet.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "",
+            count: 25695,
+            positions: {
+              offset: 0,
+              length: 77085
+            },
+            normals: {
+              offset: 308340,
+              length: 77085
+            },
+            uv: {
+              offset: 616680,
+              length: 51390
+            },
+            arms: {
+              offset: 822240,
+              length: 102780
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/crosshair/data/camo1_co.webp"
+          },
+          {
+            slot: "visor",
+            selections: [
+              "visor"
+            ],
+            texture: "",
+            count: 183,
+            positions: {
+              offset: 1233360,
+              length: 549
+            },
+            normals: {
+              offset: 1235556,
+              length: 549
+            },
+            uv: {
+              offset: 1237752,
+              length: 366
+            },
+            arms: {
+              offset: 1239216,
+              length: 732
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/crosshair/data/visor_co.webp"
+          }
+        ]
+      },
+      ls_sob_hunter_helmet: {
+        url: "./assets/armor/models/ls_sob_hunter_helmet.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "",
+            count: 22956,
+            positions: {
+              offset: 0,
+              length: 68868
+            },
+            normals: {
+              offset: 275472,
+              length: 68868
+            },
+            uv: {
+              offset: 550944,
+              length: 45912
+            },
+            arms: {
+              offset: 734592,
+              length: 91824
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/hunter/data/camo1_co.webp"
+          },
+          {
+            slot: "visor",
+            selections: [
+              "visor"
+            ],
+            texture: "",
+            count: 240,
+            positions: {
+              offset: 1101888,
+              length: 720
+            },
+            normals: {
+              offset: 1104768,
+              length: 720
+            },
+            uv: {
+              offset: 1107648,
+              length: 480
+            },
+            arms: {
+              offset: 1109568,
+              length: 960
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/hunter/data/visor_co.webp"
+          }
+        ]
+      },
+      ls_sob_fordo_helmet: {
+        url: "./assets/armor/models/ls_sob_fordo_helmet.bin",
+        groups: [
+          {
+            slot: "helmet",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\helmets\\modifiedbarc\\data\\helmet_co.paa",
+            count: 11802,
+            positions: {
+              offset: 0,
+              length: 35406
+            },
+            normals: {
+              offset: 141624,
+              length: 35406
+            },
+            uv: {
+              offset: 283248,
+              length: 23604
+            },
+            arms: {
+              offset: 377664,
+              length: 47208
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/modifiedbarc/data/helmet_co.webp"
+          },
+          {
+            slot: "visor",
+            selections: [],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\helmets\\modifiedbarc\\data\\helmet_co.paa",
+            count: 195,
+            positions: {
+              offset: 566496,
+              length: 585
+            },
+            normals: {
+              offset: 568836,
+              length: 585
+            },
+            uv: {
+              offset: 571176,
+              length: 390
+            },
+            arms: {
+              offset: 572736,
+              length: 780
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/modifiedbarc/data/helmet_co.webp"
+          },
+          {
+            slot: "visor",
+            selections: [
+              "visor"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\helmets\\modifiedbarc\\data\\helmet_co.paa",
+            count: 12,
+            positions: {
+              offset: 575856,
+              length: 36
+            },
+            normals: {
+              offset: 576e3,
+              length: 36
+            },
+            uv: {
+              offset: 576144,
+              length: 24
+            },
+            arms: {
+              offset: 576240,
+              length: 48
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/modifiedbarc/data/helmet_co.webp"
+          },
+          {
+            slot: "visor",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\helmets\\modifiedbarc\\data\\helmet_co.paa",
+            count: 117,
+            positions: {
+              offset: 576432,
+              length: 351
+            },
+            normals: {
+              offset: 577836,
+              length: 351
+            },
+            uv: {
+              offset: 579240,
+              length: 234
+            },
+            arms: {
+              offset: 580176,
+              length: 468
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/modifiedbarc/data/helmet_co.webp"
+          }
+        ]
+      },
+      ls_cloneHelmet_phase1_pilot: {
+        url: "./assets/armor/models/ls_cloneHelmet_phase1_pilot.bin",
+        groups: [
+          {
+            slot: "helmet",
+            selections: [],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\helmets\\phase1pilot\\data\\helmet_co.paa",
+            count: 219,
+            positions: {
+              offset: 0,
+              length: 657
+            },
+            normals: {
+              offset: 2628,
+              length: 657
+            },
+            uv: {
+              offset: 5256,
+              length: 438
+            },
+            arms: {
+              offset: 7008,
+              length: 876
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/phase1pilot/data/helmet_co.webp"
+          },
+          {
+            slot: "helmet",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\helmets\\phase1pilot\\data\\helmet_co.paa",
+            count: 14385,
+            positions: {
+              offset: 10512,
+              length: 43155
+            },
+            normals: {
+              offset: 183132,
+              length: 43155
+            },
+            uv: {
+              offset: 355752,
+              length: 28770
+            },
+            arms: {
+              offset: 470832,
+              length: 57540
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/phase1pilot/data/helmet_co.webp"
+          },
+          {
+            slot: "lifesupport",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\helmets\\phase1pilot\\data\\lifesupport_co.paa",
+            count: 12402,
+            positions: {
+              offset: 700992,
+              length: 37206
+            },
+            normals: {
+              offset: 849816,
+              length: 37206
+            },
+            uv: {
+              offset: 998640,
+              length: 24804
+            },
+            arms: {
+              offset: 1097856,
+              length: 49608
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/phase1pilot/data/lifesupport_co.webp"
+          },
+          {
+            slot: "visor",
+            selections: [
+              "visor"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\helmets\\phase1pilot\\data\\visor_co.paa",
+            count: 240,
+            positions: {
+              offset: 1296288,
+              length: 720
+            },
+            normals: {
+              offset: 1299168,
+              length: 720
+            },
+            uv: {
+              offset: 1302048,
+              length: 480
+            },
+            arms: {
+              offset: 1303968,
+              length: 960
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/phase1pilot/data/visor_co.webp"
+          }
+        ]
+      },
+      ls_sob_phase1SpecOp_helmet: {
+        url: "./assets/armor/models/ls_sob_phase1SpecOp_helmet.bin",
+        groups: [
+          {
+            slot: "helmet",
+            selections: [
+              "camo1"
+            ],
+            texture: "",
+            count: 7944,
+            positions: {
+              offset: 0,
+              length: 23832
+            },
+            normals: {
+              offset: 95328,
+              length: 23832
+            },
+            uv: {
+              offset: 190656,
+              length: 15888
+            },
+            arms: {
+              offset: 254208,
+              length: 31776
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/phase1specop/data/helmet_co.webp"
+          },
+          {
+            slot: "visor",
+            selections: [
+              "visor"
+            ],
+            texture: "",
+            count: 240,
+            positions: {
+              offset: 381312,
+              length: 720
+            },
+            normals: {
+              offset: 384192,
+              length: 720
+            },
+            uv: {
+              offset: 387072,
+              length: 480
+            },
+            arms: {
+              offset: 388992,
+              length: 960
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/phase1specop/data/visor_co.webp"
+          }
+        ]
+      },
+      ls_gar_phase2Insulated_helmet: {
+        url: "./assets/armor/models/ls_gar_phase2Insulated_helmet.bin",
+        groups: [
+          {
+            slot: "helmet",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\helmets\\phase2insulated\\data\\helmet_co.paa",
+            count: 5088,
+            positions: {
+              offset: 0,
+              length: 15264
+            },
+            normals: {
+              offset: 61056,
+              length: 15264
+            },
+            uv: {
+              offset: 122112,
+              length: 10176
+            },
+            arms: {
+              offset: 162816,
+              length: 20352
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/phase2insulated/data/helmet_co.webp"
+          }
+        ]
+      },
+      ls_gar_scout_helmet: {
+        url: "./assets/armor/models/ls_gar_scout_helmet.bin",
+        groups: [
+          {
+            slot: "helmet",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\helmets\\rex\\data\\helmet_co.paa",
+            count: 22488,
+            positions: {
+              offset: 0,
+              length: 67464
+            },
+            normals: {
+              offset: 269856,
+              length: 67464
+            },
+            uv: {
+              offset: 539712,
+              length: 44976
+            },
+            arms: {
+              offset: 719616,
+              length: 89952
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/scout/data/helmet_co.webp"
+          },
+          {
+            slot: "visor",
+            selections: [
+              "visor"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\helmets\\rex\\data\\visor_co.paa",
+            count: 720,
+            positions: {
+              offset: 1079424,
+              length: 2160
+            },
+            normals: {
+              offset: 1088064,
+              length: 2160
+            },
+            uv: {
+              offset: 1096704,
+              length: 1440
+            },
+            arms: {
+              offset: 1102464,
+              length: 2880
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/scout/data/visor_co.webp"
+          }
+        ]
+      },
+      ls_sob_tech_helmet: {
+        url: "./assets/armor/models/ls_sob_tech_helmet.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "",
+            count: 15243,
+            positions: {
+              offset: 0,
+              length: 45729
+            },
+            normals: {
+              offset: 182916,
+              length: 45729
+            },
+            uv: {
+              offset: 365832,
+              length: 30486
+            },
+            arms: {
+              offset: 487776,
+              length: 60972
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/tech/data/camo1_co.webp"
+          },
+          {
+            slot: "glass",
+            selections: [
+              "glass"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\helmets\\tech\\data\\glass_ca.paa",
+            count: 24,
+            positions: {
+              offset: 731664,
+              length: 72
+            },
+            normals: {
+              offset: 731952,
+              length: 72
+            },
+            uv: {
+              offset: 732240,
+              length: 48
+            },
+            arms: {
+              offset: 732432,
+              length: 96
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/tech/data/glass_ca.webp"
+          }
+        ]
+      },
+      ls_sob_wrecker_helmet: {
+        url: "./assets/armor/models/ls_sob_wrecker_helmet.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "",
+            count: 9096,
+            positions: {
+              offset: 0,
+              length: 27288
+            },
+            normals: {
+              offset: 109152,
+              length: 27288
+            },
+            uv: {
+              offset: 218304,
+              length: 18192
+            },
+            arms: {
+              offset: 291072,
+              length: 36384
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/wrecker/data/camo1_co.webp"
+          },
+          {
+            slot: "visor",
+            selections: [
+              "visor"
+            ],
+            texture: "",
+            count: 66,
+            positions: {
+              offset: 436608,
+              length: 198
+            },
+            normals: {
+              offset: 437400,
+              length: 198
+            },
+            uv: {
+              offset: 438192,
+              length: 132
+            },
+            arms: {
+              offset: 438720,
+              length: 264
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/wrecker/data/visor_co.webp"
+          }
+        ]
+      },
+      ls_uniform_clone_commando: {
+        url: "./assets/armor/models/ls_uniform_clone_commando.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\uniforms\\commando\\data\\camo1_co.paa",
+            count: 20124,
+            positions: {
+              offset: 0,
+              length: 60372
+            },
+            normals: {
+              offset: 241488,
+              length: 60372
+            },
+            uv: {
+              offset: 482976,
+              length: 40248
+            },
+            arms: {
+              offset: 643968,
+              length: 80496
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/uniforms/commando/data/camo1_co.webp"
+          },
+          {
+            slot: "camo2",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\uniforms\\commando\\data\\camo2_co.paa",
+            count: 8124,
+            positions: {
+              offset: 965952,
+              length: 24372
+            },
+            normals: {
+              offset: 1063440,
+              length: 24372
+            },
+            uv: {
+              offset: 1160928,
+              length: 16248
+            },
+            arms: {
+              offset: 1225920,
+              length: 32496
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/uniforms/commando/data/camo2_co.webp"
+          }
+        ]
+      },
+      ls_gar_phase2Insulated_uniform: {
+        url: "./assets/armor/models/ls_gar_phase2Insulated_uniform.bin",
+        groups: [
+          {
+            slot: "lower",
+            selections: [
+              "_lower"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\uniforms\\phase2insulated\\data\\lower_co.paa",
+            count: 28194,
+            positions: {
+              offset: 0,
+              length: 84582
+            },
+            normals: {
+              offset: 338328,
+              length: 84582
+            },
+            uv: {
+              offset: 676656,
+              length: 56388
+            },
+            arms: {
+              offset: 902208,
+              length: 112776
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/uniforms/phase2insulated/data/lower_co.webp"
+          },
+          {
+            slot: "undersuit",
+            selections: [
+              "_undersuit",
+              "insignia"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\uniforms\\phase2insulated\\data\\undersuit_co.paa",
+            count: 48,
+            positions: {
+              offset: 1353312,
+              length: 144
+            },
+            normals: {
+              offset: 1353888,
+              length: 144
+            },
+            uv: {
+              offset: 1354464,
+              length: 96
+            },
+            arms: {
+              offset: 1354848,
+              length: 192
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/uniforms/phase2insulated/data/undersuit_co.webp"
+          },
+          {
+            slot: "undersuit",
+            selections: [
+              "_undersuit"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\uniforms\\phase2insulated\\data\\undersuit_co.paa",
+            count: 14193,
+            positions: {
+              offset: 1355616,
+              length: 42579
+            },
+            normals: {
+              offset: 1525932,
+              length: 42579
+            },
+            uv: {
+              offset: 1696248,
+              length: 28386
+            },
+            arms: {
+              offset: 1809792,
+              length: 56772
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/uniforms/phase2insulated/data/undersuit_co.webp"
+          },
+          {
+            slot: "upper",
+            selections: [
+              "_upper",
+              "insignia"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\uniforms\\phase2insulated\\data\\upper_co.paa",
+            count: 864,
+            positions: {
+              offset: 2036880,
+              length: 2592
+            },
+            normals: {
+              offset: 2047248,
+              length: 2592
+            },
+            uv: {
+              offset: 2057616,
+              length: 1728
+            },
+            arms: {
+              offset: 2064528,
+              length: 3456
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/uniforms/phase2insulated/data/upper_co.webp"
+          },
+          {
+            slot: "upper",
+            selections: [
+              "_upper"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\uniforms\\phase2insulated\\data\\upper_co.paa",
+            count: 31479,
+            positions: {
+              offset: 2078352,
+              length: 94437
+            },
+            normals: {
+              offset: 2456100,
+              length: 94437
+            },
+            uv: {
+              offset: 2833848,
+              length: 62958
+            },
+            arms: {
+              offset: 3085680,
+              length: 125916
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/uniforms/phase2insulated/data/upper_co.webp"
+          }
+        ]
+      },
+      ls_gar_airborneLight_vest: {
+        url: "./assets/armor/models/ls_gar_airborneLight_vest.bin",
+        groups: [
+          {
+            slot: "heavy_accessories",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\heavy\\heavy_accessories_co.paa",
+            count: 1020,
+            positions: {
+              offset: 0,
+              length: 3060
+            },
+            normals: {
+              offset: 12240,
+              length: 3060
+            },
+            uv: {
+              offset: 24480,
+              length: 2040
+            },
+            arms: {
+              offset: 32640,
+              length: 4080
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/heavy/heavy_accessories_co.webp"
+          },
+          {
+            slot: "heavy_accessories",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\heavy\\heavy_accessories_co.paa",
+            count: 4410,
+            positions: {
+              offset: 48960,
+              length: 13230
+            },
+            normals: {
+              offset: 101880,
+              length: 13230
+            },
+            uv: {
+              offset: 154800,
+              length: 8820
+            },
+            arms: {
+              offset: 190080,
+              length: 17640
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/heavy/heavy_accessories_co.webp"
+          },
+          {
+            slot: "heavy_accessories",
+            selections: [
+              "ammo"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\heavy\\heavy_accessories_co.paa",
+            count: 6204,
+            positions: {
+              offset: 260640,
+              length: 18612
+            },
+            normals: {
+              offset: 335088,
+              length: 18612
+            },
+            uv: {
+              offset: 409536,
+              length: 12408
+            },
+            arms: {
+              offset: 459168,
+              length: 24816
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/heavy/heavy_accessories_co.webp"
+          },
+          {
+            slot: "heavy_accessories",
+            selections: [
+              "pauldron"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\heavy\\heavy_accessories_co.paa",
+            count: 960,
+            positions: {
+              offset: 558432,
+              length: 2880
+            },
+            normals: {
+              offset: 569952,
+              length: 2880
+            },
+            uv: {
+              offset: 581472,
+              length: 1920
+            },
+            arms: {
+              offset: 589152,
+              length: 3840
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/heavy/heavy_accessories_co.webp"
+          },
+          {
+            slot: "heavy_accessories_holsters",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\heavy\\heavy_accessories_co.paa",
+            count: 990,
+            positions: {
+              offset: 604512,
+              length: 2970
+            },
+            normals: {
+              offset: 616392,
+              length: 2970
+            },
+            uv: {
+              offset: 628272,
+              length: 1980
+            },
+            arms: {
+              offset: 636192,
+              length: 3960
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/heavy/heavy_accessories_co.webp"
+          },
+          {
+            slot: "heavy_accessories_holsters",
+            selections: [
+              "ammo"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\heavy\\heavy_accessories_co.paa",
+            count: 210,
+            positions: {
+              offset: 652032,
+              length: 630
+            },
+            normals: {
+              offset: 654552,
+              length: 630
+            },
+            uv: {
+              offset: 657072,
+              length: 420
+            },
+            arms: {
+              offset: 658752,
+              length: 840
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/heavy/heavy_accessories_co.webp"
+          }
+        ]
+      },
+      ls_gar_arf_vest: {
+        url: "./assets/armor/models/ls_gar_arf_vest.bin",
+        groups: [
+          {
+            slot: "heavy_accessories",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\heavy\\heavy_accessories_co.paa",
+            count: 1020,
+            positions: {
+              offset: 0,
+              length: 3060
+            },
+            normals: {
+              offset: 12240,
+              length: 3060
+            },
+            uv: {
+              offset: 24480,
+              length: 2040
+            },
+            arms: {
+              offset: 32640,
+              length: 4080
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/heavy/heavy_accessories_co.webp"
+          },
+          {
+            slot: "heavy_accessories_holsters",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\heavy\\heavy_accessories_co.paa",
+            count: 780,
+            positions: {
+              offset: 48960,
+              length: 2340
+            },
+            normals: {
+              offset: 58320,
+              length: 2340
+            },
+            uv: {
+              offset: 67680,
+              length: 1560
+            },
+            arms: {
+              offset: 73920,
+              length: 3120
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/heavy/heavy_accessories_co.webp"
+          },
+          {
+            slot: "light_accessories",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\light\\light_accessories_co.paa",
+            count: 534,
+            positions: {
+              offset: 86400,
+              length: 1602
+            },
+            normals: {
+              offset: 92808,
+              length: 1602
+            },
+            uv: {
+              offset: 99216,
+              length: 1068
+            },
+            arms: {
+              offset: 103488,
+              length: 2136
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/light/light_accessories_co.webp"
+          },
+          {
+            slot: "officer_accessories",
+            selections: [
+              "camo3"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\officer\\officer_accessories_black_co.paa",
+            count: 744,
+            positions: {
+              offset: 112032,
+              length: 2232
+            },
+            normals: {
+              offset: 120960,
+              length: 2232
+            },
+            uv: {
+              offset: 129888,
+              length: 1488
+            },
+            arms: {
+              offset: 135840,
+              length: 2976
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/officer/officer_accessories_black_co.webp"
+          }
+        ]
+      },
+      ls_gar_assault_vest: {
+        url: "./assets/armor/models/ls_gar_assault_vest.bin",
+        groups: [
+          {
+            slot: "heavy_accessories",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\heavy\\heavy_accessories_co.paa",
+            count: 1020,
+            positions: {
+              offset: 0,
+              length: 3060
+            },
+            normals: {
+              offset: 12240,
+              length: 3060
+            },
+            uv: {
+              offset: 24480,
+              length: 2040
+            },
+            arms: {
+              offset: 32640,
+              length: 4080
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/heavy/heavy_accessories_co.webp"
+          },
+          {
+            slot: "heavy_accessories_holsters",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\heavy\\heavy_accessories_co.paa",
+            count: 780,
+            positions: {
+              offset: 48960,
+              length: 2340
+            },
+            normals: {
+              offset: 58320,
+              length: 2340
+            },
+            uv: {
+              offset: 67680,
+              length: 1560
+            },
+            arms: {
+              offset: 73920,
+              length: 3120
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/heavy/heavy_accessories_co.webp"
+          },
+          {
+            slot: "light_accessories",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\light\\light_accessories_co.paa",
+            count: 1056,
+            positions: {
+              offset: 86400,
+              length: 3168
+            },
+            normals: {
+              offset: 99072,
+              length: 3168
+            },
+            uv: {
+              offset: 111744,
+              length: 2112
+            },
+            arms: {
+              offset: 120192,
+              length: 4224
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/light/light_accessories_co.webp"
+          },
+          {
+            slot: "light_accessories_holsters",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\light\\light_accessories_co.paa",
+            count: 4932,
+            positions: {
+              offset: 137088,
+              length: 14796
+            },
+            normals: {
+              offset: 196272,
+              length: 14796
+            },
+            uv: {
+              offset: 255456,
+              length: 9864
+            },
+            arms: {
+              offset: 294912,
+              length: 19728
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/light/light_accessories_co.webp"
+          }
+        ]
+      },
+      ls_vest_clone_commando_eod: {
+        url: "./assets/armor/models/ls_vest_clone_commando_eod.bin",
+        groups: [
+          {
+            slot: "",
+            selections: [],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\uniforms\\commando\\data\\camo2_co.paa",
+            count: 3,
+            positions: {
+              offset: 0,
+              length: 9
+            },
+            normals: {
+              offset: 36,
+              length: 9
+            },
+            uv: {
+              offset: 72,
+              length: 6
+            },
+            arms: {
+              offset: 96,
+              length: 12
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/uniforms/commando/data/camo2_co.webp"
+          },
+          {
+            slot: "camo2",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\uniforms\\commando\\data\\camo2_co.paa",
+            count: 2568,
+            positions: {
+              offset: 144,
+              length: 7704
+            },
+            normals: {
+              offset: 30960,
+              length: 7704
+            },
+            uv: {
+              offset: 61776,
+              length: 5136
+            },
+            arms: {
+              offset: 82320,
+              length: 10272
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/uniforms/commando/data/camo2_co.webp"
+          }
+        ]
+      },
+      ls_vest_clone_commando_sl: {
+        url: "./assets/armor/models/ls_vest_clone_commando_sl.bin",
+        groups: [
+          {
+            slot: "camo2",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\uniforms\\commando\\data\\camo2_co.paa",
+            count: 486,
+            positions: {
+              offset: 0,
+              length: 1458
+            },
+            normals: {
+              offset: 5832,
+              length: 1458
+            },
+            uv: {
+              offset: 11664,
+              length: 972
+            },
+            arms: {
+              offset: 15552,
+              length: 1944
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/uniforms/commando/data/camo2_co.webp"
+          }
+        ]
+      },
+      ls_vest_clone_commando_sniper: {
+        url: "./assets/armor/models/ls_vest_clone_commando_sniper.bin",
+        groups: [
+          {
+            slot: "camo2",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\uniforms\\commando\\data\\camo2_co.paa",
+            count: 1140,
+            positions: {
+              offset: 0,
+              length: 3420
+            },
+            normals: {
+              offset: 13680,
+              length: 3420
+            },
+            uv: {
+              offset: 27360,
+              length: 2280
+            },
+            arms: {
+              offset: 36480,
+              length: 4560
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/uniforms/commando/data/camo2_co.webp"
+          },
+          {
+            slot: "camo2",
+            selections: [
+              "camo1",
+              "illum"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\uniforms\\commando\\data\\camo2_co.paa",
+            count: 36,
+            positions: {
+              offset: 54720,
+              length: 108
+            },
+            normals: {
+              offset: 55152,
+              length: 108
+            },
+            uv: {
+              offset: 55584,
+              length: 72
+            },
+            arms: {
+              offset: 55872,
+              length: 144
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/uniforms/commando/data/camo2_co.webp"
+          }
+        ]
+      },
+      ls_vest_clone_commando_tech: {
+        url: "./assets/armor/models/ls_vest_clone_commando_tech.bin",
+        groups: [
+          {
+            slot: "camo2",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\uniforms\\commando\\data\\camo2_co.paa",
+            count: 738,
+            positions: {
+              offset: 0,
+              length: 2214
+            },
+            normals: {
+              offset: 8856,
+              length: 2214
+            },
+            uv: {
+              offset: 17712,
+              length: 1476
+            },
+            arms: {
+              offset: 23616,
+              length: 2952
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/uniforms/commando/data/camo2_co.webp"
+          }
+        ]
+      },
+      ls_gar_engineer_vest: {
+        url: "./assets/armor/models/ls_gar_engineer_vest.bin",
+        groups: [
+          {
+            slot: "heavy_accessories",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\heavy\\heavy_accessories_co.paa",
+            count: 3552,
+            positions: {
+              offset: 0,
+              length: 10656
+            },
+            normals: {
+              offset: 42624,
+              length: 10656
+            },
+            uv: {
+              offset: 85248,
+              length: 7104
+            },
+            arms: {
+              offset: 113664,
+              length: 14208
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/engineer/data/heavy_accessories_engineer_co.webp"
+          },
+          {
+            slot: "heavy_accessories_holsters",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\heavy\\heavy_accessories_co.paa",
+            count: 990,
+            positions: {
+              offset: 170496,
+              length: 2970
+            },
+            normals: {
+              offset: 182376,
+              length: 2970
+            },
+            uv: {
+              offset: 194256,
+              length: 1980
+            },
+            arms: {
+              offset: 202176,
+              length: 3960
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/engineer/data/heavy_accessories_engineer_co.webp"
+          },
+          {
+            slot: "light_accessories",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\light\\light_accessories_co.paa",
+            count: 2532,
+            positions: {
+              offset: 218016,
+              length: 7596
+            },
+            normals: {
+              offset: 248400,
+              length: 7596
+            },
+            uv: {
+              offset: 278784,
+              length: 5064
+            },
+            arms: {
+              offset: 299040,
+              length: 10128
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/light/light_accessories_co.webp"
+          },
+          {
+            slot: "light_accessories_holsters",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\light\\light_accessories_co.paa",
+            count: 312,
+            positions: {
+              offset: 339552,
+              length: 936
+            },
+            normals: {
+              offset: 343296,
+              length: 936
+            },
+            uv: {
+              offset: 347040,
+              length: 624
+            },
+            arms: {
+              offset: 349536,
+              length: 1248
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/light/light_accessories_co.webp"
+          }
+        ]
+      },
+      ls_gar_forceReconCommander_vest: {
+        url: "./assets/armor/models/ls_gar_forceReconCommander_vest.bin",
+        groups: [
+          {
+            slot: "heavy_accessories",
+            selections: [
+              "camo3"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\heavy\\heavy_accessories_co.paa",
+            count: 1689,
+            positions: {
+              offset: 0,
+              length: 5067
+            },
+            normals: {
+              offset: 20268,
+              length: 5067
+            },
+            uv: {
+              offset: 40536,
+              length: 3378
+            },
+            arms: {
+              offset: 54048,
+              length: 6756
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/heavy/heavy_accessories_co.webp"
+          },
+          {
+            slot: "light_accessories",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\light\\light_accessories_co.paa",
+            count: 1056,
+            positions: {
+              offset: 81072,
+              length: 3168
+            },
+            normals: {
+              offset: 93744,
+              length: 3168
+            },
+            uv: {
+              offset: 106416,
+              length: 2112
+            },
+            arms: {
+              offset: 114864,
+              length: 4224
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/light/light_accessories_co.webp"
+          },
+          {
+            slot: "light_accessories_holsters",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\light\\light_accessories_co.paa",
+            count: 1560,
+            positions: {
+              offset: 131760,
+              length: 4680
+            },
+            normals: {
+              offset: 150480,
+              length: 4680
+            },
+            uv: {
+              offset: 169200,
+              length: 3120
+            },
+            arms: {
+              offset: 181680,
+              length: 6240
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/light/light_accessories_co.webp"
+          },
+          {
+            slot: "officer_accessories",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\officer\\officer_accessories_co.paa",
+            count: 2304,
+            positions: {
+              offset: 206640,
+              length: 6912
+            },
+            normals: {
+              offset: 234288,
+              length: 6912
+            },
+            uv: {
+              offset: 261936,
+              length: 4608
+            },
+            arms: {
+              offset: 280368,
+              length: 9216
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/officer/officer_accessories_co.webp"
+          },
+          {
+            slot: "officer_accessories",
+            selections: [
+              "camo4"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\officer\\officer_accessories_co.paa",
+            count: 4830,
+            positions: {
+              offset: 317232,
+              length: 14490
+            },
+            normals: {
+              offset: 375192,
+              length: 14490
+            },
+            uv: {
+              offset: 433152,
+              length: 9660
+            },
+            arms: {
+              offset: 471792,
+              length: 19320
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/officer/officer_accessories_co.webp"
+          }
+        ]
+      },
+      ls_gar_grenadier_vest: {
+        url: "./assets/armor/models/ls_gar_grenadier_vest.bin",
+        groups: [
+          {
+            slot: "heavy_accessories",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\heavy\\heavy_accessories_co.paa",
+            count: 1020,
+            positions: {
+              offset: 0,
+              length: 3060
+            },
+            normals: {
+              offset: 12240,
+              length: 3060
+            },
+            uv: {
+              offset: 24480,
+              length: 2040
+            },
+            arms: {
+              offset: 32640,
+              length: 4080
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/heavy/heavy_accessories_co.webp"
+          },
+          {
+            slot: "heavy_accessories_holsters",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\heavy\\heavy_accessories_co.paa",
+            count: 780,
+            positions: {
+              offset: 48960,
+              length: 2340
+            },
+            normals: {
+              offset: 58320,
+              length: 2340
+            },
+            uv: {
+              offset: 67680,
+              length: 1560
+            },
+            arms: {
+              offset: 73920,
+              length: 3120
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/heavy/heavy_accessories_co.webp"
+          },
+          {
+            slot: "light_accessories",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\light\\light_accessories_co.paa",
+            count: 4452,
+            positions: {
+              offset: 86400,
+              length: 13356
+            },
+            normals: {
+              offset: 139824,
+              length: 13356
+            },
+            uv: {
+              offset: 193248,
+              length: 8904
+            },
+            arms: {
+              offset: 228864,
+              length: 17808
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/light/light_accessories_co.webp"
+          },
+          {
+            slot: "light_accessories_holsters",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\light\\light_accessories_co.paa",
+            count: 9240,
+            positions: {
+              offset: 300096,
+              length: 27720
+            },
+            normals: {
+              offset: 410976,
+              length: 27720
+            },
+            uv: {
+              offset: 521856,
+              length: 18480
+            },
+            arms: {
+              offset: 595776,
+              length: 36960
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/light/light_accessories_co.webp"
+          }
+        ]
+      },
+      ls_gar_lanceCaptain_vest: {
+        url: "./assets/armor/models/ls_gar_lanceCaptain_vest.bin",
+        groups: [
+          {
+            slot: "kenrobi",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\lancecaptain\\data\\kenrobi_co.paa",
+            count: 15216,
+            positions: {
+              offset: 0,
+              length: 45648
+            },
+            normals: {
+              offset: 182592,
+              length: 45648
+            },
+            uv: {
+              offset: 365184,
+              length: 30432
+            },
+            arms: {
+              offset: 486912,
+              length: 60864
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/lancecaptain/data/kenrobi_co.webp"
+          },
+          {
+            slot: "kenrobi",
+            selections: [],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\lancecaptain\\data\\kenrobi_co.paa",
+            count: 3,
+            positions: {
+              offset: 730368,
+              length: 9
+            },
+            normals: {
+              offset: 730404,
+              length: 9
+            },
+            uv: {
+              offset: 730440,
+              length: 6
+            },
+            arms: {
+              offset: 730464,
+              length: 12
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/lancecaptain/data/kenrobi_co.webp"
+          }
+        ]
+      },
+      ls_gar_lanceCommander_vest: {
+        url: "./assets/armor/models/ls_gar_lanceCommander_vest.bin",
+        groups: [
+          {
+            slot: "kenrobi",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\lancecaptain\\data\\kenrobi_co.paa",
+            count: 15216,
+            positions: {
+              offset: 0,
+              length: 45648
+            },
+            normals: {
+              offset: 182592,
+              length: 45648
+            },
+            uv: {
+              offset: 365184,
+              length: 30432
+            },
+            arms: {
+              offset: 486912,
+              length: 60864
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/lancecaptain/data/kenrobi_co.webp"
+          }
+        ]
+      },
+      ls_gar_marine_vest: {
+        url: "./assets/armor/models/ls_gar_marine_vest.bin",
+        groups: [
+          {
+            slot: "heavy_accessories_holsters",
+            selections: [
+              "ammoleft"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\heavy\\heavy_accessories_co.paa",
+            count: 210,
+            positions: {
+              offset: 0,
+              length: 630
+            },
+            normals: {
+              offset: 2520,
+              length: 630
+            },
+            uv: {
+              offset: 5040,
+              length: 420
+            },
+            arms: {
+              offset: 6720,
+              length: 840
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/heavy/heavy_accessories_co.webp"
+          },
+          {
+            slot: "officer_accessories",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\officer\\officer_accessories_co.paa",
+            count: 4830,
+            positions: {
+              offset: 10080,
+              length: 14490
+            },
+            normals: {
+              offset: 68040,
+              length: 14490
+            },
+            uv: {
+              offset: 126e3,
+              length: 9660
+            },
+            arms: {
+              offset: 164640,
+              length: 19320
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/officer/officer_accessories_co.webp"
+          },
+          {
+            slot: "officer_accessories_holsters",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\officer\\officer_accessories_co.paa",
+            count: 876,
+            positions: {
+              offset: 241920,
+              length: 2628
+            },
+            normals: {
+              offset: 252432,
+              length: 2628
+            },
+            uv: {
+              offset: 262944,
+              length: 1752
+            },
+            arms: {
+              offset: 269952,
+              length: 3504
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/officer/officer_accessories_co.webp"
+          },
+          {
+            slot: "camo1",
+            selections: [
+              "bandolier"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\marine\\data\\camo1_co.paa",
+            count: 1164,
+            positions: {
+              offset: 283968,
+              length: 3492
+            },
+            normals: {
+              offset: 297936,
+              length: 3492
+            },
+            uv: {
+              offset: 311904,
+              length: 2328
+            },
+            arms: {
+              offset: 321216,
+              length: 4656
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/marine/data/camo1_co.webp"
+          },
+          {
+            slot: "camo1",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\marine\\data\\camo1_co.paa",
+            count: 456,
+            positions: {
+              offset: 339840,
+              length: 1368
+            },
+            normals: {
+              offset: 345312,
+              length: 1368
+            },
+            uv: {
+              offset: 350784,
+              length: 912
+            },
+            arms: {
+              offset: 354432,
+              length: 1824
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/marine/data/camo1_co.webp"
+          },
+          {
+            slot: "camo1",
+            selections: [
+              "ammoright"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\marine\\data\\camo1_co.paa",
+            count: 792,
+            positions: {
+              offset: 361728,
+              length: 2376
+            },
+            normals: {
+              offset: 371232,
+              length: 2376
+            },
+            uv: {
+              offset: 380736,
+              length: 1584
+            },
+            arms: {
+              offset: 387072,
+              length: 3168
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/marine/data/camo1_co.webp"
+          }
+        ]
+      },
+      ls_gar_medic_vest: {
+        url: "./assets/armor/models/ls_gar_medic_vest.bin",
+        groups: [
+          {
+            slot: "heavy_accessories",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\heavy\\heavy_accessories_co.paa",
+            count: 12846,
+            positions: {
+              offset: 0,
+              length: 38538
+            },
+            normals: {
+              offset: 154152,
+              length: 38538
+            },
+            uv: {
+              offset: 308304,
+              length: 25692
+            },
+            arms: {
+              offset: 411072,
+              length: 51384
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/medic/data/heavy_accessories_medic_co.webp"
+          },
+          {
+            slot: "heavy_accessories_holsters",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\heavy\\heavy_accessories_co.paa",
+            count: 990,
+            positions: {
+              offset: 616608,
+              length: 2970
+            },
+            normals: {
+              offset: 628488,
+              length: 2970
+            },
+            uv: {
+              offset: 640368,
+              length: 1980
+            },
+            arms: {
+              offset: 648288,
+              length: 3960
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/medic/data/heavy_accessories_medic_co.webp"
+          }
+        ]
+      },
+      ls_gar_kamaAntenna_vest: {
+        url: "./assets/armor/models/ls_gar_kamaAntenna_vest.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\uniforms\\marshalcommander\\data\\camo1_co.paa",
+            count: 936,
+            positions: {
+              offset: 0,
+              length: 2808
+            },
+            normals: {
+              offset: 11232,
+              length: 2808
+            },
+            uv: {
+              offset: 22464,
+              length: 1872
+            },
+            arms: {
+              offset: 29952,
+              length: 3744
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/officer/officer_accessories_co.webp"
+          },
+          {
+            slot: "officer_accessories",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\officer\\officer_accessories_co.paa",
+            count: 4830,
+            positions: {
+              offset: 44928,
+              length: 14490
+            },
+            normals: {
+              offset: 102888,
+              length: 14490
+            },
+            uv: {
+              offset: 160848,
+              length: 9660
+            },
+            arms: {
+              offset: 199488,
+              length: 19320
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/officer/officer_accessories_co.webp"
+          },
+          {
+            slot: "officer_accessories_holsters",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\officer\\officer_accessories_co.paa",
+            count: 1752,
+            positions: {
+              offset: 276768,
+              length: 5256
+            },
+            normals: {
+              offset: 297792,
+              length: 5256
+            },
+            uv: {
+              offset: 318816,
+              length: 3504
+            },
+            arms: {
+              offset: 332832,
+              length: 7008
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/officer/officer_accessories_co.webp"
+          }
+        ]
+      },
+      ls_gar_lieutenant_vest: {
+        url: "./assets/armor/models/ls_gar_lieutenant_vest.bin",
+        groups: [
+          {
+            slot: "officer_accessories",
+            selections: [
+              "camo1"
+            ],
+            texture: "",
+            count: 2208,
+            positions: {
+              offset: 0,
+              length: 6624
+            },
+            normals: {
+              offset: 26496,
+              length: 6624
+            },
+            uv: {
+              offset: 52992,
+              length: 4416
+            },
+            arms: {
+              offset: 70656,
+              length: 8832
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/officer/officer_accessories_co.webp"
+          },
+          {
+            slot: "officer_accessories_holsters",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\officer\\officer_accessories_co.paa",
+            count: 876,
+            positions: {
+              offset: 105984,
+              length: 2628
+            },
+            normals: {
+              offset: 116496,
+              length: 2628
+            },
+            uv: {
+              offset: 127008,
+              length: 1752
+            },
+            arms: {
+              offset: 134016,
+              length: 3504
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/officer/officer_accessories_co.webp"
+          }
+        ]
+      },
+      ls_gar_rebreather_vest: {
+        url: "./assets/armor/models/ls_gar_rebreather_vest.bin",
+        groups: [
+          {
+            slot: "helmet",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\helmets\\phase2pilot\\data\\helmet_co.paa",
+            count: 3288,
+            positions: {
+              offset: 0,
+              length: 9864
+            },
+            normals: {
+              offset: 39456,
+              length: 9864
+            },
+            uv: {
+              offset: 78912,
+              length: 6576
+            },
+            arms: {
+              offset: 105216,
+              length: 13152
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/phase2Pilot/data/helmet_co.webp"
+          },
+          {
+            slot: "heavy_accessories",
+            selections: [
+              "pauldron"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\heavy\\heavy_accessories_co.paa",
+            count: 114,
+            positions: {
+              offset: 157824,
+              length: 342
+            },
+            normals: {
+              offset: 159192,
+              length: 342
+            },
+            uv: {
+              offset: 160560,
+              length: 228
+            },
+            arms: {
+              offset: 161472,
+              length: 456
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/heavy/heavy_accessories_co.webp"
+          },
+          {
+            slot: "heavy_accessories",
+            selections: [
+              "camo3"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\heavy\\heavy_accessories_co.paa",
+            count: 2994,
+            positions: {
+              offset: 163296,
+              length: 8982
+            },
+            normals: {
+              offset: 199224,
+              length: 8982
+            },
+            uv: {
+              offset: 235152,
+              length: 5988
+            },
+            arms: {
+              offset: 259104,
+              length: 11976
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/heavy/heavy_accessories_co.webp"
+          },
+          {
+            slot: "officer_accessories_holsters",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\officer\\officer_accessories_co.paa",
+            count: 876,
+            positions: {
+              offset: 307008,
+              length: 2628
+            },
+            normals: {
+              offset: 317520,
+              length: 2628
+            },
+            uv: {
+              offset: 328032,
+              length: 1752
+            },
+            arms: {
+              offset: 335040,
+              length: 3504
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/officer/officer_accessories_co.webp"
+          }
+        ]
+      },
+      ls_gar_reconSurvival_vest: {
+        url: "./assets/armor/models/ls_gar_reconSurvival_vest.bin",
+        groups: [
+          {
+            slot: "camo1",
+            selections: [
+              "camo3"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\uniforms\\marshalcommander\\data\\camo1_co.paa",
+            count: 1212,
+            positions: {
+              offset: 0,
+              length: 3636
+            },
+            normals: {
+              offset: 14544,
+              length: 3636
+            },
+            uv: {
+              offset: 29088,
+              length: 2424
+            },
+            arms: {
+              offset: 38784,
+              length: 4848
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/heavy/heavy_accessories_co.webp"
+          },
+          {
+            slot: "heavy_accessories",
+            selections: [
+              "holster"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\heavy\\heavy_accessories_co.paa",
+            count: 1020,
+            positions: {
+              offset: 58176,
+              length: 3060
+            },
+            normals: {
+              offset: 70416,
+              length: 3060
+            },
+            uv: {
+              offset: 82656,
+              length: 2040
+            },
+            arms: {
+              offset: 90816,
+              length: 4080
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/heavy/heavy_accessories_co.webp"
+          },
+          {
+            slot: "heavy_accessories",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\heavy\\heavy_accessories_co.paa",
+            count: 2994,
+            positions: {
+              offset: 107136,
+              length: 8982
+            },
+            normals: {
+              offset: 143064,
+              length: 8982
+            },
+            uv: {
+              offset: 178992,
+              length: 5988
+            },
+            arms: {
+              offset: 202944,
+              length: 11976
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/heavy/heavy_accessories_co.webp"
+          },
+          {
+            slot: "heavy_accessories",
+            selections: [
+              "ammo"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\heavy\\heavy_accessories_co.paa",
+            count: 6204,
+            positions: {
+              offset: 250848,
+              length: 18612
+            },
+            normals: {
+              offset: 325296,
+              length: 18612
+            },
+            uv: {
+              offset: 399744,
+              length: 12408
+            },
+            arms: {
+              offset: 449376,
+              length: 24816
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/heavy/heavy_accessories_co.webp"
+          },
+          {
+            slot: "heavy_accessories",
+            selections: [
+              "pauldron"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\heavy\\heavy_accessories_co.paa",
+            count: 960,
+            positions: {
+              offset: 548640,
+              length: 2880
+            },
+            normals: {
+              offset: 560160,
+              length: 2880
+            },
+            uv: {
+              offset: 571680,
+              length: 1920
+            },
+            arms: {
+              offset: 579360,
+              length: 3840
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/heavy/heavy_accessories_co.webp"
+          },
+          {
+            slot: "heavy_accessories_holsters",
+            selections: [
+              "holster"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\heavy\\heavy_accessories_co.paa",
+            count: 780,
+            positions: {
+              offset: 594720,
+              length: 2340
+            },
+            normals: {
+              offset: 604080,
+              length: 2340
+            },
+            uv: {
+              offset: 613440,
+              length: 1560
+            },
+            arms: {
+              offset: 619680,
+              length: 3120
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/heavy/heavy_accessories_co.webp"
+          },
+          {
+            slot: "heavy_accessories_holsters",
+            selections: [
+              "ammo"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\heavy\\heavy_accessories_co.paa",
+            count: 210,
+            positions: {
+              offset: 632160,
+              length: 630
+            },
+            normals: {
+              offset: 634680,
+              length: 630
+            },
+            uv: {
+              offset: 637200,
+              length: 420
+            },
+            arms: {
+              offset: 638880,
+              length: 840
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/heavy/heavy_accessories_co.webp"
+          },
+          {
+            slot: "light_accessories",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\light\\light_accessories_co.paa",
+            count: 504,
+            positions: {
+              offset: 642240,
+              length: 1512
+            },
+            normals: {
+              offset: 648288,
+              length: 1512
+            },
+            uv: {
+              offset: 654336,
+              length: 1008
+            },
+            arms: {
+              offset: 658368,
+              length: 2016
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/light/light_accessories_co.webp"
+          },
+          {
+            slot: "light_accessories_holsters",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\light\\light_accessories_co.paa",
+            count: 312,
+            positions: {
+              offset: 666432,
+              length: 936
+            },
+            normals: {
+              offset: 670176,
+              length: 936
+            },
+            uv: {
+              offset: 673920,
+              length: 624
+            },
+            arms: {
+              offset: 676416,
+              length: 1248
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/light/light_accessories_co.webp"
+          }
+        ]
+      },
+      ls_gar_specialist_vest: {
+        url: "./assets/armor/models/ls_gar_specialist_vest.bin",
+        groups: [
+          {
+            slot: "heavy_accessories",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\heavy\\heavy_accessories_co.paa",
+            count: 1020,
+            positions: {
+              offset: 0,
+              length: 3060
+            },
+            normals: {
+              offset: 12240,
+              length: 3060
+            },
+            uv: {
+              offset: 24480,
+              length: 2040
+            },
+            arms: {
+              offset: 32640,
+              length: 4080
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/heavy/heavy_accessories_co.webp"
+          },
+          {
+            slot: "heavy_accessories_holsters",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\heavy\\heavy_accessories_co.paa",
+            count: 780,
+            positions: {
+              offset: 48960,
+              length: 2340
+            },
+            normals: {
+              offset: 58320,
+              length: 2340
+            },
+            uv: {
+              offset: 67680,
+              length: 1560
+            },
+            arms: {
+              offset: 73920,
+              length: 3120
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/heavy/heavy_accessories_co.webp"
+          },
+          {
+            slot: "light_accessories",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\light\\light_accessories_co.paa",
+            count: 2532,
+            positions: {
+              offset: 86400,
+              length: 7596
+            },
+            normals: {
+              offset: 116784,
+              length: 7596
+            },
+            uv: {
+              offset: 147168,
+              length: 5064
+            },
+            arms: {
+              offset: 167424,
+              length: 10128
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/light/light_accessories_co.webp"
+          },
+          {
+            slot: "light_accessories_holsters",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\light\\light_accessories_co.paa",
+            count: 312,
+            positions: {
+              offset: 207936,
+              length: 936
+            },
+            normals: {
+              offset: 211680,
+              length: 936
+            },
+            uv: {
+              offset: 215424,
+              length: 624
+            },
+            arms: {
+              offset: 217920,
+              length: 1248
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/light/light_accessories_co.webp"
+          }
+        ]
+      },
+      ls_gar_tacticalCommander_vest: {
+        url: "./assets/armor/models/ls_gar_tacticalCommander_vest.bin",
+        groups: [
+          {
+            slot: "arc_accessories",
+            selections: [
+              "camo1"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\arc\\data\\arc_accessories_co.paa",
+            count: 7554,
+            positions: {
+              offset: 0,
+              length: 22662
+            },
+            normals: {
+              offset: 90648,
+              length: 22662
+            },
+            uv: {
+              offset: 181296,
+              length: 15108
+            },
+            arms: {
+              offset: 241728,
+              length: 30216
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/arc/data/arc_accessories_co.webp"
+          },
+          {
+            slot: "light_accessories",
+            selections: [],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\light\\light_accessories_co.paa",
+            count: 2532,
+            positions: {
+              offset: 362592,
+              length: 7596
+            },
+            normals: {
+              offset: 392976,
+              length: 7596
+            },
+            uv: {
+              offset: 423360,
+              length: 5064
+            },
+            arms: {
+              offset: 443616,
+              length: 10128
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/light/light_accessories_co.webp"
+          },
+          {
+            slot: "light_accessories_holsters",
+            selections: [],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\light\\light_accessories_co.paa",
+            count: 1218,
+            positions: {
+              offset: 484128,
+              length: 3654
+            },
+            normals: {
+              offset: 498744,
+              length: 3654
+            },
+            uv: {
+              offset: 513360,
+              length: 2436
+            },
+            arms: {
+              offset: 523104,
+              length: 4872
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/light/light_accessories_co.webp"
+          },
+          {
+            slot: "officer_accessories",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\officer\\officer_accessories_co.paa",
+            count: 7134,
+            positions: {
+              offset: 542592,
+              length: 21402
+            },
+            normals: {
+              offset: 628200,
+              length: 21402
+            },
+            uv: {
+              offset: 713808,
+              length: 14268
+            },
+            arms: {
+              offset: 770880,
+              length: 28536
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/officer/officer_accessories_co.webp"
+          },
+          {
+            slot: "officer_accessories_holsters",
+            selections: [
+              "camo2"
+            ],
+            texture: "ls\\core\\addons\\characters_clone_legacy\\vests\\common\\officer\\officer_accessories_co.paa",
+            count: 18,
+            positions: {
+              offset: 885024,
+              length: 54
+            },
+            normals: {
+              offset: 885240,
+              length: 54
+            },
+            uv: {
+              offset: 885456,
+              length: 36
+            },
+            arms: {
+              offset: 885600,
+              length: 72
+            },
+            defaultMap: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/common/officer/officer_accessories_co.webp"
+          }
+        ]
       }
     },
     textures: [
@@ -7798,6 +16239,494 @@
       {
         source: "ls/core/addons/characters_clone_legacy/backpacks/arc/data/camo1_co.paa",
         url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/arc/data/camo1_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/backpacks/arc/data/camo1_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/backpacks/arc/data/camo1_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/backpacks/beltbag/data/camo1_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/backpacks/beltbag/data/camo1_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/backpacks/cdv/data/camo1_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/backpacks/cdv/data/camo1_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/backpacks/jt12/data/camo1_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/backpacks/jt12/data/camo1_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/backpacks/minilr/data/camo1_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/backpacks/minilr/data/camo1_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/backpacks/minilr_attachment/data/camo1_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/backpacks/minilr_attachment/data/camo1_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/backpacks/standard/data/ammo_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/backpacks/standard/data/ammo_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/backpacks/standard/data/backpack_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/backpacks/standard/data/backpack_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/backpacks/standard/data/bacta_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/backpacks/standard/data/bacta_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/backpacks/standard/data/canister_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/backpacks/standard/data/canister_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/backpacks/standard/data/heavy_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/backpacks/standard/data/heavy_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/backpacks/standard/data/lower_supplies_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/backpacks/standard/data/lower_supplies_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/backpacks/standard/data/medic_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/backpacks/standard/data/medic_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/backpacks/standard/data/radio_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/backpacks/standard/data/radio_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/backpacks/standard/data/rockets_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/backpacks/standard/data/rockets_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/backpacks/standard/data/supplies_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/backpacks/standard/data/supplies_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/equipment/arf/data/camo1_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/equipment/arf/data/camo1_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/equipment/binoculars/data/electrobinoculars/camo1_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/equipment/binoculars/data/electrobinoculars/camo1_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/equipment/binoculars/data/electrobinocularscommander/camo1_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/equipment/binoculars/data/electrobinocularscommander/camo1_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/equipment/binoculars/data/electrobinocularscommander/camo1_night_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/equipment/binoculars/data/electrobinocularscommander/camo1_night_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/equipment/binoculars/data/electrobinocularscommander/optic_ca.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/equipment/binoculars/data/electrobinocularscommander/optic_ca.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/equipment/headlamps/data/camo1_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/equipment/headlamps/data/camo1_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/equipment/nvgs/commander/data/camo1_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/equipment/nvgs/commander/data/camo1_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/equipment/nvgs/commander/data/camo1_white_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/equipment/nvgs/commander/data/camo1_white_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/equipment/nvgs/phase3pilot/data/arc_ca.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/equipment/nvgs/phase3pilot/data/arc_ca.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/equipment/nvgs/phase3pilot/data/imperial_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/equipment/nvgs/phase3pilot/data/imperial_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/equipment/nvgs/phase3pilot/data/vwing_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/equipment/nvgs/phase3pilot/data/vwing_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/equipment/nvgs/rangefinder/data/camo1_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/equipment/nvgs/rangefinder/data/camo1_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/equipment/nvgs/rangefinder/data/optic_ca.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/equipment/nvgs/rangefinder/data/optic_ca.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/equipment/nvgs/visor/data/camo1_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/equipment/nvgs/visor/data/camo1_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/helmets/airborne/data/camo1_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/helmets/airborne/data/camo1_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/helmets/arc/data/helmet_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/helmets/arc/data/helmet_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/helmets/arf/data/helmet_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/helmets/arf/data/helmet_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/helmets/atrtdriver/data/helmet_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/helmets/atrtdriver/data/helmet_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/helmets/phase1/data/helmet_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/helmets/phase1/data/helmet_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/helmets/phase1/data/visor_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/helmets/phase1/data/visor_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/helmets/phase2/data/helmet_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/helmets/phase2/data/helmet_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/helmets/phase2/data/visor_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/helmets/phase2/data/visor_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/helmets/phase2pilot/data/camo1_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/helmets/phase2pilot/data/camo1_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/helmets/phase2pilot/data/camo2_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/helmets/phase2pilot/data/camo2_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/helmets/phase3pilot/data/camo1_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/helmets/phase3pilot/data/camo1_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/helmets/phase3pilot/data/camo2_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/helmets/phase3pilot/data/camo2_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/helmets/scout/data/camo1_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/helmets/scout/data/camo1_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/uniforms/jedicommander/data/armor_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/uniforms/jedicommander/data/armor_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/uniforms/jedicommander/data/belt_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/uniforms/jedicommander/data/belt_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/uniforms/jedicommander/data/robes_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/uniforms/jedicommander/data/robes_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/uniforms/jedicommander/data/undersuit_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/uniforms/jedicommander/data/undersuit_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/uniforms/phase2/data/lower_armor_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/uniforms/phase2/data/lower_armor_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/uniforms/phase2/data/mc_accessories_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/uniforms/phase2/data/mc_accessories_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/uniforms/phase2/data/undersuit_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/uniforms/phase2/data/undersuit_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/uniforms/phase2/data/upper_armor_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/uniforms/phase2/data/upper_armor_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/uniforms/scout/data/armor_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/uniforms/scout/data/armor_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/uniforms/scout/data/camo1_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/uniforms/scout/data/camo1_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/vests/arc/data/camo1_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/vests/arc/data/camo1_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/vests/arc/data/camo2_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/vests/arc/data/camo2_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/vests/arc/data/camo3_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/vests/arc/data/camo3_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/vests/gunner/data/camo1_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/vests/gunner/data/camo1_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/vests/gunner/data/camo2_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/vests/gunner/data/camo2_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/vests/officer/data/ammo_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/vests/officer/data/ammo_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/vests/officer/data/bandolier_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/vests/officer/data/bandolier_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/vests/officer/data/kama_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/vests/officer/data/kama_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/vests/officer/data/pauldron_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/vests/officer/data/pauldron_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/vests/recon/data/camo1_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/vests/recon/data/camo1_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone/vests/scout/data/pouches_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone/vests/scout/data/pouches_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/backpacks/commando/data/camo1_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/commando/data/camo1_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/backpacks/commando/data/camo2_tech_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/commando/data/camo2_tech_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/backpacks/marine/data/camo1_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/marine/data/camo1_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/backpacks/mynock/data/pack_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/mynock/data/pack_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/backpacks/mynock/data/wing_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/mynock/data/wing_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/backpacks/standard/data/backpack_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/backpack_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/backpacks/standard/data/backpack_eod_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/backpack_eod_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/backpacks/standard/data/backpack_medic_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/backpack_medic_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/backpacks/standard/data/cover_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/cover_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/backpacks/standard/data/holder_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/holder_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/backpacks/standard/data/light_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/light_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/backpacks/standard/data/medic_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/medic_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/backpacks/standard/data/pouches_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/pouches_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/backpacks/standard/data/radio_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/radio_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/backpacks/standard/data/rocket_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/rocket_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/backpacks/standard/data/screen_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/screen_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/backpacks/standard/data/tube_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/standard/data/tube_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/backpacks/survival/data/backpack_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/survival/data/backpack_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/backpacks/survival/data/box_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/survival/data/box_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/backpacks/survival/data/box_medic_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/backpacks/survival/data/box_medic_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/equipment/arfantenna/data/camo1_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/equipment/arfantenna/data/camo1_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/equipment/nvgs/commander/data/optic_ca.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/equipment/nvgs/commander/data/optic_ca.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/equipment/nvgs/rangefinder/data/optic_ca.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/equipment/nvgs/rangefinder/data/optic_ca.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/equipment/nvgs/visor/data/optic_ca.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/equipment/nvgs/visor/data/optic_ca.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/helmets/atrt/data/antenna_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/atrt/data/antenna_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/helmets/atrt/data/helmet_atrt_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/atrt/data/helmet_atrt_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/helmets/cadet/data/camo1_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/cadet/data/camo1_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/helmets/cadet/data/visor_ca.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/cadet/data/visor_ca.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/helmets/cadet/data/visor_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/cadet/data/visor_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/helmets/commando/data/camo1_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/commando/data/camo1_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/helmets/crosshair/data/camo1_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/crosshair/data/camo1_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/helmets/crosshair/data/visor_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/crosshair/data/visor_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/helmets/hunter/data/camo1_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/hunter/data/camo1_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/helmets/hunter/data/visor_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/hunter/data/visor_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/helmets/modifiedbarc/data/helmet_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/modifiedbarc/data/helmet_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/helmets/phase1pilot/data/helmet_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/phase1pilot/data/helmet_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/helmets/phase1pilot/data/helmet_enforcer_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/phase1pilot/data/helmet_enforcer_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/helmets/phase1pilot/data/helmet_republic_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/phase1pilot/data/helmet_republic_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/helmets/phase1pilot/data/lifesupport_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/phase1pilot/data/lifesupport_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/helmets/phase1pilot/data/visor_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/phase1pilot/data/visor_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/helmets/phase1specop/data/helmet_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/phase1specop/data/helmet_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/helmets/phase1specop/data/visor_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/phase1specop/data/visor_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/helmets/phase2insulated/data/helmet_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/phase2insulated/data/helmet_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/helmets/scout/data/helmet_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/scout/data/helmet_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/helmets/scout/data/visor_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/scout/data/visor_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/helmets/tech/data/camo1_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/tech/data/camo1_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/helmets/tech/data/glass_ca.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/tech/data/glass_ca.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/helmets/wrecker/data/camo1_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/wrecker/data/camo1_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/helmets/wrecker/data/visor_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/helmets/wrecker/data/visor_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/uniforms/commando/data/camo1_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/uniforms/commando/data/camo1_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/uniforms/commando/data/camo2_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/uniforms/commando/data/camo2_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/uniforms/phase2insulated/data/lower_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/uniforms/phase2insulated/data/lower_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/uniforms/phase2insulated/data/undersuit_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/uniforms/phase2insulated/data/undersuit_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/uniforms/phase2insulated/data/upper_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/uniforms/phase2insulated/data/upper_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/vests/lancecaptain/data/kenrobi_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/lancecaptain/data/kenrobi_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/vests/marine/data/camo1_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/marine/data/camo1_co.webp"
+      },
+      {
+        source: "ls/core/addons/characters_clone_legacy/vests/medic/data/heavy_accessories_medic_co.paa",
+        url: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/vests/medic/data/heavy_accessories_medic_co.webp"
+      },
+      {
+        source: "ls/core/addons/data/textures/blank_ca.paa",
+        url: "./assets/armor/textures/ls/core/addons/data/textures/blank_ca.webp"
       }
     ],
     undersuit: "./assets/armor/textures/ls/core/addons/characters_clone_legacy/uniforms/phase2/data/undersuit_co.webp",
@@ -34535,6 +43464,39 @@ void main() {
     return canvas2;
   }
 
+  // project-store.js
+  var database;
+  function openProjects() {
+    database ??= new Promise((resolve, reject) => {
+      const request = indexedDB.open("zpg-armor-viewer", 1);
+      request.onupgradeneeded = () => request.result.createObjectStore("projects", { keyPath: "name" });
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    }).catch((error) => {
+      database = void 0;
+      throw error;
+    });
+    return database;
+  }
+  async function transact(mode, operation) {
+    const db = await openProjects();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction("projects", mode);
+      const request = operation(transaction.objectStore("projects"));
+      transaction.oncomplete = () => resolve(request.result);
+      transaction.onabort = () => reject(transaction.error);
+    });
+  }
+  function listProjects() {
+    return transact("readonly", (store) => store.getAllKeys());
+  }
+  function loadProject(name) {
+    return transact("readonly", (store) => store.get(name));
+  }
+  function saveProject(project) {
+    return transact("readwrite", (store) => store.put(project));
+  }
+
   // armor.js
   var panel = document.getElementById("armor-view");
   var slots = { helmet: "\u0428\u043B\u0435\u043C", visor: "\u0412\u0438\u0437\u043E\u0440", nvg: "\u041F\u041D\u0412 / NVG", upper: "\u0412\u0435\u0440\u0445", vest: "\u0416\u0438\u043B\u0435\u0442", lower: "\u041D\u0438\u0437", backpack: "\u0420\u044E\u043A\u0437\u0430\u043A" };
@@ -34579,12 +43541,19 @@ void main() {
     <h2 class="armor-control-title">${label}</h2>
     <button class="armor-focus-button" type="button" data-focus="${slot}" disabled aria-label="${label} \u043A\u0440\u0443\u043F\u043D\u044B\u043C \u043F\u043B\u0430\u043D\u043E\u043C">\u041A\u0440\u0443\u043F\u043D\u043E</button>
     <button class="armor-isolate-button" type="button" data-isolate="${slot}" aria-pressed="false" disabled>\u0418\u0437\u043E\u043B\u0438\u0440\u043E\u0432\u0430\u0442\u044C \xB7 I</button>
-    ${slot === "lower" ? '<p class="armor-note">\u041C\u043E\u0434\u0435\u043B\u044C \u0432\u0435\u0440\u0445\u0430 \u0438 \u043D\u0438\u0437\u0430 \u0432\u044B\u0431\u0438\u0440\u0430\u0435\u0442\u0441\u044F \u0432 \u0431\u043B\u043E\u043A\u0435 \xAB\u0412\u0435\u0440\u0445\xBB.</p>' : slot === "visor" ? '<p class="armor-note" id="armor-visor-note"></p><p class="armor-note"><a id="armor-visor-template" download hidden>\u0421\u043A\u0430\u0447\u0430\u0442\u044C \u0448\u0442\u0430\u0442\u043D\u0443\u044E \u043A\u0430\u0440\u0442\u0443 \u0432\u0438\u0437\u043E\u0440\u0430</a></p>' : '<label class="armor-field"><span>\u041C\u043E\u0434\u0435\u043B\u044C</span><select data-model disabled></select></label>'}
+    ${slot === "lower" ? '<p class="armor-note">\u041C\u043E\u0434\u0435\u043B\u044C \u0432\u0435\u0440\u0445\u0430 \u0438 \u043D\u0438\u0437\u0430 \u0432\u044B\u0431\u0438\u0440\u0430\u0435\u0442\u0441\u044F \u0432 \u0431\u043B\u043E\u043A\u0435 \xAB\u0412\u0435\u0440\u0445\xBB.</p>' : slot === "visor" ? '<p class="armor-note" id="armor-visor-note"></p>' : `<label class="armor-field"><span>\u041F\u043E\u0438\u0441\u043A \u043C\u043E\u0434\u0435\u043B\u0438</span><input type="search" data-model-search placeholder="\u041D\u0430\u0437\u0432\u0430\u043D\u0438\u0435 \u0438\u043B\u0438 ID" disabled></label>
+           <label class="armor-field"><span>\u041C\u043E\u0434\u0435\u043B\u044C</span><select data-model disabled></select></label>
+           <p class="armor-note" data-model-results></p>`}
+    <div class="armor-mesh-name" data-mesh-name hidden>
+      <label class="armor-field"><span>\u0418\u043C\u044F \u043C\u043E\u0434\u0435\u043B\u0438 (.p3d)</span><input data-mesh-id readonly spellcheck="false"></label>
+      <button type="button" data-copy-mesh>\u041A\u043E\u043F\u0438\u0440\u043E\u0432\u0430\u0442\u044C</button>
+    </div>
     ${slot === "helmet" ? orientationField : ""}
     ${slot === "nvg" ? '<label class="armor-switch" id="armor-nvg-position" hidden>\u041E\u043F\u0443\u0441\u0442\u0438\u0442\u044C \u041F\u041D\u0412<input id="armor-nvg-down" type="checkbox" disabled></label>' : ""}
-    ${slot === "helmet" ? '<p class="armor-note"><a id="armor-helmet-template" download>\u0421\u043A\u0430\u0447\u0430\u0442\u044C \u0440\u0430\u0437\u0432\u0451\u0440\u0442\u043A\u0443 \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u043E\u0433\u043E \u0448\u043B\u0435\u043C\u0430</a></p><label class="armor-note"><input type="checkbox" id="armor-helmet-original"> \u041F\u043E\u043A\u0430\u0437\u0430\u0442\u044C \u0448\u0442\u0430\u0442\u043D\u0443\u044E \u0442\u0435\u043A\u0441\u0442\u0443\u0440\u0443</label>' : ""}
+    ${slot === "helmet" ? '<label class="armor-note"><input type="checkbox" id="armor-helmet-original"> \u041F\u043E\u043A\u0430\u0437\u0430\u0442\u044C \u0448\u0442\u0430\u0442\u043D\u0443\u044E \u0442\u0435\u043A\u0441\u0442\u0443\u0440\u0443</label>' : ""}
     <div class="armor-texture-controls">
       <h3>\u0422\u0435\u043A\u0441\u0442\u0443\u0440\u0430</h3>
+      <div class="armor-texture-downloads" data-downloads hidden></div>
       <div class="armor-texture-actions">
         <button type="button" data-pick disabled>\u041F\u043E\u0434\u043A\u043B\u044E\u0447\u0438\u0442\u044C Live</button>
         <button type="button" data-reset disabled>\u0421\u0431\u0440\u043E\u0441\u0438\u0442\u044C</button>
@@ -34610,6 +43579,7 @@ void main() {
       <div class="armor-status" role="status">\u0417\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u043C\u043E\u0434\u0435\u043B\u0438\u2026</div>
       <div class="armor-viewport-label"><span aria-hidden="true"></span> 3D-\u043F\u0440\u043E\u0441\u043C\u043E\u0442\u0440</div>
       <div class="armor-camera-tools" aria-label="\u0418\u043D\u0441\u0442\u0440\u0443\u043C\u0435\u043D\u0442\u044B \u043F\u0440\u043E\u0441\u043C\u043E\u0442\u0440\u0430">
+        <button type="button" id="armor-project-open" title="\u041F\u0440\u043E\u0435\u043A\u0442\u044B" aria-label="\u041F\u0440\u043E\u0435\u043A\u0442\u044B" disabled>${toolbarIcon('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>')}</button>
         <button type="button" id="armor-parts-toggle" title="\u0414\u0435\u0442\u0430\u043B\u0438" aria-label="\u0414\u0435\u0442\u0430\u043B\u0438" aria-expanded="false" aria-controls="armor-parts-panel">${toolbarIcon('<rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/>')}</button>
         <button type="button" data-camera="reset" title="\u0412\u0435\u0441\u044C \u043A\u043E\u043C\u043F\u043B\u0435\u043A\u0442" aria-label="\u0412\u0435\u0441\u044C \u043A\u043E\u043C\u043F\u043B\u0435\u043A\u0442">${toolbarIcon('<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5m-4-14 4 2.3v5.4L12 17l-4-2.3V9.3L12 7Zm-4 2.3 4 2.3 4-2.3m-4 2.3V17"/>')}</button>
         <button type="button" id="armor-quad-toggle" title="\u0427\u0435\u0442\u044B\u0440\u0435 \u0432\u0438\u0434\u0430" aria-label="\u0427\u0435\u0442\u044B\u0440\u0435 \u0432\u0438\u0434\u0430" aria-pressed="false">${toolbarIcon('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 3v18M3 12h18"/>')}</button>
@@ -34634,6 +43604,18 @@ void main() {
         </section>
         ${Object.entries(slots).map(([slot, label]) => textureSection(slot, label)).join("")}
       </aside>
+      <dialog id="armor-projects" class="armor-projects" aria-labelledby="armor-project-title">
+        <h2 id="armor-project-title">\u041F\u0440\u043E\u0435\u043A\u0442\u044B</h2>
+        <button class="armor-close-panel" id="armor-project-close" type="button" aria-label="\u0417\u0430\u043A\u0440\u044B\u0442\u044C \u043F\u0440\u043E\u0435\u043A\u0442\u044B">\xD7</button>
+        <label class="armor-field"><span>\u0421\u043E\u0445\u0440\u0430\u043D\u0451\u043D\u043D\u044B\u0439 \u043F\u0440\u043E\u0435\u043A\u0442</span><select id="armor-project-list"></select></label>
+        <button type="button" id="armor-project-load">\u041E\u0442\u043A\u0440\u044B\u0442\u044C</button>
+        <form id="armor-project-save">
+          <label class="armor-field"><span>\u041D\u0430\u0437\u0432\u0430\u043D\u0438\u0435 \u043F\u0440\u043E\u0435\u043A\u0442\u0430</span><input id="armor-project-name" maxlength="80" required></label>
+          <button type="submit">\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C</button>
+        </form>
+        <p class="armor-note" id="armor-project-status" role="status"></p>
+        <div id="armor-project-relinks"></div>
+      </dialog>
   </div>
   <footer class="armor-shortcuts" aria-label="\u0423\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u043C\u043E\u0434\u0435\u043B\u044C\u044E">
     <span><kbd>\u041B\u041A\u041C</kbd> \u0412\u0440\u0430\u0449\u0435\u043D\u0438\u0435</span>
@@ -34684,6 +43666,7 @@ void main() {
       t.colorSpace = SRGBColorSpace;
       t.flipY = false;
       t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+      t.name = url.split("/").pop();
       t.wrapS = t.wrapT = RepeatWrapping;
       return t;
     }).catch((error) => {
@@ -34722,7 +43705,14 @@ void main() {
     group.userData.kind = kind;
     parts.forEach((part, i) => {
       let slot = part.slot, map;
-      if (kind === "body") map = slot === "camo1" ? maps.upper : slot === "camo2" ? maps.lower : maps.undersuit;
+      if (maps.defaults) {
+        map = maps.defaults[i];
+        const selections = part.selections.map((name) => name.toLowerCase());
+        if (kind === "body") {
+          if (selections.includes("camo2") || /camo2|lower|legs/.test(slot)) slot = "camo2";
+          else if (selections.includes("camo1") || !/undersuit|bodyglove/.test(slot)) slot = "camo1";
+        } else if (selections.some(isVisor)) slot = "visor";
+      } else if (kind === "body") map = slot === "camo1" ? maps.upper : slot === "camo2" ? maps.lower : maps.undersuit;
       else map = isVisor(slot) ? maps.visor : /flap|camo2/.test(slot) ? maps.flaps : /illum|light/.test(slot) ? maps.light : maps.main;
       const mat = new MeshStandardMaterial({ map, color: map ? 16777215 : kind === "body" ? 1515818 : 15132905, roughness: /visor|glass/.test(slot) ? 0.22 : 0.64, metalness: /visor|glass/.test(slot) ? 0.3 : 0.08, side: DoubleSide });
       const mesh = new Mesh(kind === "body" ? part.geometry.clone() : part.geometry, mat);
@@ -34732,7 +43722,7 @@ void main() {
       mesh.castShadow = true;
       mesh.receiveShadow = false;
       if (kind === "body") mesh.userData.restGeometry = part.geometry;
-      if (kind === "helmet" && /flap|camo2/.test(slot) && !maps.flaps && !maps.keepFlaps) mesh.visible = false;
+      if (kind === "helmet" && /flap|camo2/.test(slot) && !maps.defaults && !maps.flaps && !maps.keepFlaps) mesh.visible = false;
       mesh.userData.initialVisibility = mesh.visible;
       group.add(mesh);
     });
@@ -34809,13 +43799,31 @@ void main() {
     nvg: catalog.nvgs
   };
   var modelInputs = Object.fromEntries(Object.keys(modelLists).map((slot) => [slot, sections[slot].querySelector("[data-model]")]));
+  var modelSearches = Object.fromEntries(Object.keys(modelLists).map((slot) => [slot, sections[slot].querySelector("[data-model-search]")]));
   var selectedModels = { ...initialModels };
   var nvgDownInput = $("#armor-nvg-down");
   var nvgDown = false;
+  var modelChanges = 0;
+  var applyingProject = false;
   async function buildModel(slot, id, lowered) {
     const item = modelLists[slot].find((entry) => entry.id === id);
     if (slot === "backpack" || slot === "vest") return buildAccessory(slot, item);
     if (slot === "nvg") return buildAccessory(slot, item, lowered ? item?.model : item?.offModel ?? item?.model);
+    if (item.useMeshMaterials) {
+      const parts2 = await geometry(item.model);
+      const defaults = await Promise.all(parts2.map((part) => getTexture(part.defaultMap)));
+      const group2 = buildPart(parts2, slot === "upper" ? "body" : "helmet", { defaults });
+      group2.userData.uvLayout = item.model;
+      if (slot === "helmet") {
+        const main2 = group2.children.find((mesh) => !/visor|glass|flap|camo2|illum|light/i.test(mesh.userData.slot));
+        const visor2 = group2.children.find((mesh) => isVisor(mesh.userData.slot));
+        group2.userData.primaryMap = main2?.material.map;
+        group2.userData.template = main2?.material.map?.image;
+        group2.userData.hasVisor = Boolean(visor2);
+        group2.userData.visorTemplate = visor2?.material.map?.image;
+      }
+      return group2;
+    }
     if (slot === "upper") {
       const [parts2, upper, lower, undersuit] = await Promise.all([
         geometry(item.model || catalog.bodyModel),
@@ -34845,10 +43853,8 @@ void main() {
     group.userData.uvLayout = item.model;
     group.userData.primaryMap = main;
     group.userData.template = main?.image;
-    group.userData.templateName = mainUrl?.split("/").pop();
     group.userData.hasVisor = parts.some((part) => isVisor(part.slot));
     group.userData.visorTemplate = visor?.image;
-    group.userData.visorTemplateName = visorUrl?.split("/").pop();
     return group;
   }
   function updateSlotControls() {
@@ -34857,12 +43863,27 @@ void main() {
       section.querySelector("[data-focus]").disabled = !ready || !partFor(slot);
       section.querySelector("[data-isolate]").disabled = !ready || !partFor(slot);
       section.querySelector("[data-reset]").disabled = !ready || !customTextures.has(slot) && !liveTextures.has(slot);
+      const meshId = meshIdFor(slot);
+      const nameField = section.querySelector("[data-mesh-name]");
+      const nameInput = nameField.querySelector("[data-mesh-id]");
+      if (nameInput.value !== meshId) nameInput.value = meshId;
+      nameField.hidden = !meshId;
     }
     $("#armor-visor-note").textContent = helmet?.userData.hasVisor ? "\u041F\u043E\u0434\u043A\u043B\u044E\u0447\u0438 \u043E\u0442\u0434\u0435\u043B\u044C\u043D\u0443\u044E \u0442\u0435\u043A\u0441\u0442\u0443\u0440\u0443 \u0432\u0438\u0437\u043E\u0440\u0430." : "\u0423 \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u043E\u0433\u043E \u0448\u043B\u0435\u043C\u0430 \u0432\u0438\u0437\u043E\u0440 \u0432\u0445\u043E\u0434\u0438\u0442 \u0432 \u043E\u0431\u0449\u0443\u044E \u0442\u0435\u043A\u0441\u0442\u0443\u0440\u0443. \u041F\u043E\u0434\u043A\u043B\u044E\u0447\u0438 \u0444\u0430\u0439\u043B \u0432 \u0440\u0430\u0437\u0434\u0435\u043B\u0435 \xAB\u0428\u043B\u0435\u043C\xBB.";
   }
+  function meshIdFor(slot) {
+    const modelSlot = slot === "lower" ? "upper" : slot === "visor" ? "helmet" : slot;
+    const model = modelLists[modelSlot].find((item) => item.id === selectedModels[modelSlot]);
+    if (!model || !partFor(slot)) return "";
+    if (slot === "nvg" && !nvgDown && model.offModel) return model.offModel;
+    return model.model || (modelSlot === "upper" ? catalog.bodyModel : "");
+  }
   async function changeModel(slot, id, lowered = false) {
     const input = modelInputs[slot];
+    modelChanges++;
+    $("#armor-project-open").disabled = true;
     input.disabled = true;
+    modelSearches[slot].disabled = true;
     if (slot === "nvg") nvgDownInput.disabled = true;
     try {
       const next = await buildModel(slot, id, lowered);
@@ -34897,34 +43918,27 @@ void main() {
       if (next) scene.add(next);
       if (!partFor(isolatedSlot)) isolatedSlot = null;
       updateIsolation();
-      if (slot === "helmet") {
-        const link = $("#armor-helmet-template");
-        link.hidden = !next.userData.template;
-        if (next.userData.template) {
-          link.href = next.userData.template.src;
-          link.download = next.userData.templateName;
-        }
-        const visorLink = $("#armor-visor-template");
-        visorLink.hidden = !next.userData.hasVisor || !next.userData.visorTemplate;
-        if (!visorLink.hidden) {
-          visorLink.href = next.userData.visorTemplate.src;
-          visorLink.download = next.userData.visorTemplateName;
-        }
-      }
+      affectedSlots.forEach(updateTextureDownloads);
       if (slot === "upper" || slot === "vest") applyPose();
       for (const affected of affectedSlots) {
         const texture = customTextures.get(affected);
         if (texture) setSlotTexture(affected, texture);
       }
-      if (ready) cameraView(next ? slot : "reset");
+      if (ready && !applyingProject) cameraView(next ? slot : "reset");
       message("");
+      return true;
     } catch (error) {
       input.value = selectedModels[slot];
       if (!ready) throw error;
       message("\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043E\u0442\u043A\u0440\u044B\u0442\u044C \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u0443\u044E \u043C\u043E\u0434\u0435\u043B\u044C.");
       console.error(error);
+      return false;
     } finally {
+      modelChanges--;
+      $("#armor-project-open").disabled = !ready || modelChanges > 0;
       input.disabled = !ready;
+      modelSearches[slot].disabled = !ready;
+      filterModels(slot);
       if (slot === "nvg") {
         const item = modelLists.nvg.find((entry) => entry.id === selectedModels.nvg);
         const hasPositions = Boolean(item?.offModel && item.model !== item.offModel);
@@ -34935,12 +43949,27 @@ void main() {
       updateSlotControls();
     }
   }
+  function filterModels(slot) {
+    const input = modelInputs[slot];
+    const terms = modelSearches[slot].value.toLowerCase().trim().split(/\s+/).filter(Boolean);
+    const matches = modelLists[slot].filter((item) => {
+      const label = `${item.name} ${item.id} ${item.model}`.toLowerCase();
+      return terms.every((term) => label.includes(term));
+    });
+    const selected = selectedModels[slot];
+    const options = matches.map((item) => new Option(item.name, item.id));
+    const current = modelLists[slot].find((item) => item.id === selected);
+    if (current && !matches.includes(current)) options.unshift(new Option(current.name + " (\u0432\u044B\u0431\u0440\u0430\u043D\u043E)", current.id));
+    const emptyLabel = { backpack: "\u0411\u0435\u0437 \u0440\u044E\u043A\u0437\u0430\u043A\u0430", vest: "\u0411\u0435\u0437 \u0436\u0438\u043B\u0435\u0442\u0430", nvg: "\u0411\u0435\u0437 \u041F\u041D\u0412" }[slot];
+    if (emptyLabel) options.unshift(new Option(emptyLabel, ""));
+    input.replaceChildren(...options);
+    input.value = selected;
+    sections[slot].querySelector("[data-model-results]").textContent = !terms.length ? "" : matches.length ? "\u041D\u0430\u0439\u0434\u0435\u043D\u043E: " + matches.length : "\u0421\u043E\u0432\u043F\u0430\u0434\u0435\u043D\u0438\u0439 \u043D\u0435\u0442.";
+  }
   async function loadOutfit() {
     for (const [slot, input] of Object.entries(modelInputs)) {
-      input.replaceChildren(...modelLists[slot].map((item) => new Option(item.name, item.id)));
-      const emptyLabel = { backpack: "\u0411\u0435\u0437 \u0440\u044E\u043A\u0437\u0430\u043A\u0430", vest: "\u0411\u0435\u0437 \u0436\u0438\u043B\u0435\u0442\u0430", nvg: "\u0411\u0435\u0437 \u041F\u041D\u0412" }[slot];
-      if (emptyLabel) input.prepend(new Option(emptyLabel, ""));
-      input.value = selectedModels[slot];
+      filterModels(slot);
+      modelSearches[slot].addEventListener("input", () => filterModels(slot));
       input.addEventListener("change", () => changeModel(slot, input.value));
     }
     await Promise.all(Object.keys(modelInputs).map((slot) => changeModel(slot, selectedModels[slot])));
@@ -35123,7 +44152,8 @@ void main() {
       await loadOutfit();
       ready = true;
       status.hidden = true;
-      for (const input of Object.values(modelInputs)) input.disabled = false;
+      for (const input of [...Object.values(modelInputs), ...Object.values(modelSearches)]) input.disabled = false;
+      $("#armor-project-open").disabled = false;
       updateSlotControls();
       render();
     } catch (error) {
@@ -35347,6 +44377,44 @@ void main() {
     if (slot === "nvg") return nvg;
     return slot === "upper" || slot === "lower" ? body : null;
   }
+  function updateTextureDownloads(slot) {
+    const container = sections[slot].querySelector("[data-downloads]");
+    const maps = /* @__PURE__ */ new Set();
+    const part = partFor(slot);
+    for (const mesh of part?.children ?? []) {
+      if (!mesh.isMesh || mesh.userData.initialVisibility === false) continue;
+      const materialSlot = mesh.userData.slot;
+      if (slot === "upper" && materialSlot !== "camo1") continue;
+      if (slot === "lower" && materialSlot !== "camo2") continue;
+      if (slot === "helmet" && isVisor(materialSlot)) continue;
+      if (slot === "visor" && !isVisor(materialSlot)) continue;
+      const map = mesh.userData.originalMap;
+      if (map?.image?.src) maps.add(map);
+    }
+    container.replaceChildren();
+    container.hidden = !part;
+    if (!part) return;
+    if (!maps.size) {
+      const note = document.createElement("p");
+      note.className = "armor-note";
+      note.textContent = "\u0423 \u044D\u0442\u043E\u0439 \u0434\u0435\u0442\u0430\u043B\u0438 \u043D\u0435\u0442 \u0448\u0442\u0430\u0442\u043D\u043E\u0439 \u043A\u0430\u0440\u0442\u044B.";
+      container.append(note);
+      return;
+    }
+    const names = /* @__PURE__ */ new Set();
+    for (const map of maps) {
+      const link = document.createElement("a");
+      const name = map.name || "texture.webp";
+      let filename = name;
+      for (let index = 2; names.has(filename.toLowerCase()); index++) filename = `${index}-${name}`;
+      names.add(filename.toLowerCase());
+      link.href = map.image.src;
+      link.download = filename;
+      link.textContent = maps.size === 1 ? "\u0421\u043A\u0430\u0447\u0430\u0442\u044C \u0442\u0435\u043A\u0441\u0442\u0443\u0440\u0443 \u043C\u043E\u0434\u0435\u043B\u0438" : "\u0421\u043A\u0430\u0447\u0430\u0442\u044C " + filename;
+      link.title = filename;
+      container.append(link);
+    }
+  }
   function setSlotTexture(slot, texture) {
     if (slot === "helmet" && $("#armor-helmet-original").checked) texture = null;
     partFor(slot)?.traverse((mesh) => {
@@ -35416,6 +44484,21 @@ void main() {
     onChange: updateSlotControls
   });
   for (const [slot, section] of Object.entries(sections)) {
+    const copyMesh = section.querySelector("[data-copy-mesh]");
+    const meshId = section.querySelector("[data-mesh-id]");
+    copyMesh.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(meshId.value);
+        copyMesh.textContent = "\u0421\u043A\u043E\u043F\u0438\u0440\u043E\u0432\u0430\u043D\u043E";
+      } catch {
+        meshId.focus();
+        meshId.select();
+        copyMesh.textContent = "\u041D\u0430\u0436\u043C\u0438 Ctrl+C";
+      }
+      setTimeout(() => {
+        copyMesh.textContent = "\u041A\u043E\u043F\u0438\u0440\u043E\u0432\u0430\u0442\u044C";
+      }, 1700);
+    });
     section.querySelector("[data-reset]").addEventListener("click", () => {
       liveTextures.stop(slot);
       setSlotTexture(slot, null);
@@ -35425,6 +44508,166 @@ void main() {
       render();
     });
   }
+  var projectPanel = $("#armor-projects");
+  var projectList = $("#armor-project-list");
+  var projectName = $("#armor-project-name");
+  var projectStatus = $("#armor-project-status");
+  var projectRelinks = $("#armor-project-relinks");
+  var projectLoad = $("#armor-project-load");
+  function captureView(viewCamera, target) {
+    return { position: viewCamera.position.toArray(), target: target.toArray(), zoom: viewCamera.zoom };
+  }
+  function restoreView(viewCamera, target, saved) {
+    viewCamera.position.fromArray(saved.position);
+    target.fromArray(saved.target);
+    viewCamera.zoom = saved.zoom;
+    viewCamera.lookAt(target);
+    viewCamera.updateProjectionMatrix();
+  }
+  function captureProject(name) {
+    return {
+      name,
+      version: 1,
+      models: { ...selectedModels },
+      nvgDown,
+      light: $("#armor-light-temperature").value,
+      helmetOrientation: $("#armor-helmet-orientation").value,
+      textureFiles: liveTextures.snapshot(),
+      camera: captureView(camera, controls.target),
+      quadMode,
+      quadInitialized,
+      quadViews: quadViews.map((view) => ({
+        direction: view.direction,
+        ...captureView(view.camera, view.target)
+      }))
+    };
+  }
+  async function refreshProjectList(selection) {
+    const names = await listProjects();
+    names.sort((left, right) => left.localeCompare(right, "ru"));
+    projectList.replaceChildren(...names.map((name) => new Option(name, name)));
+    if (!names.length) projectList.append(new Option("\u041F\u0440\u043E\u0435\u043A\u0442\u043E\u0432 \u043F\u043E\u043A\u0430 \u043D\u0435\u0442", ""));
+    if (selection && names.includes(selection)) projectList.value = selection;
+  }
+  function setProjectBusy(busy) {
+    for (const input of projectPanel.querySelectorAll("button, select, input")) input.disabled = busy;
+    projectLoad.disabled = busy || !projectList.value;
+  }
+  async function restoreProject(project) {
+    if (!project || project.version !== 1) throw new Error("\u041F\u0440\u043E\u0435\u043A\u0442 \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D \u0438\u043B\u0438 \u0441\u043E\u0445\u0440\u0430\u043D\u0451\u043D \u0432 \u0434\u0440\u0443\u0433\u043E\u0439 \u0432\u0435\u0440\u0441\u0438\u0438.");
+    applyingProject = true;
+    const unavailable = [];
+    try {
+      for (const slot of Object.keys(slots)) {
+        liveTextures.stop(slot);
+        setSlotTexture(slot, null);
+        customTextures.get(slot)?.dispose();
+      }
+      customTextures.clear();
+      isolatedSlot = null;
+      updateIsolation();
+      const loaded = await Promise.all(Object.entries(modelLists).map(async ([slot, models]) => {
+        const id = project.models[slot];
+        const valid = models.some((model) => model.id === id) || id === "" && initialModels[slot] !== void 0 && ["vest", "backpack", "nvg"].includes(slot);
+        if (!valid) return false;
+        modelSearches[slot].value = "";
+        return changeModel(slot, id, slot === "nvg" && project.nvgDown);
+      }));
+      $("#armor-light-temperature").value = project.light;
+      setLighting();
+      $("#armor-helmet-orientation").value = project.helmetOrientation;
+      $("#armor-helmet-original").checked = false;
+      controls.enableDamping = false;
+      controls.update();
+      restoreView(camera, controls.target, project.camera);
+      controls.update();
+      controls.enableDamping = true;
+      panel.querySelectorAll("[data-quad-view]").forEach((select) => {
+        const index = Number(select.dataset.quadView);
+        const saved = project.quadViews[index];
+        select.value = saved.direction;
+        select.dispatchEvent(new Event("change"));
+        if (project.quadInitialized) restoreView(quadViews[index].camera, quadViews[index].target, saved);
+      });
+      quadInitialized = project.quadInitialized;
+      setQuadMode(project.quadMode);
+      hidePartSettings();
+      for (const [slot, handle] of Object.entries(project.textureFiles)) {
+        const modelSlot = slot === "visor" ? "helmet" : slot === "lower" ? "upper" : slot;
+        if (!partFor(slot) || selectedModels[modelSlot] !== project.models[modelSlot]) continue;
+        if (!await liveTextures.restore(slot, handle)) unavailable.push([slot, handle.name]);
+      }
+      updateSlotControls();
+      return { unavailable, modelsMissing: loaded.includes(false) };
+    } finally {
+      applyingProject = false;
+      render();
+    }
+  }
+  $("#armor-project-open").addEventListener("click", async () => {
+    projectRelinks.replaceChildren();
+    projectStatus.textContent = "";
+    projectPanel.showModal();
+    setProjectBusy(true);
+    try {
+      await refreshProjectList(projectName.value);
+    } catch {
+      projectStatus.textContent = "\u0425\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0435 \u043F\u0440\u043E\u0435\u043A\u0442\u043E\u0432 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u043E \u0432 \u044D\u0442\u043E\u043C \u043E\u043A\u043D\u0435.";
+    } finally {
+      setProjectBusy(false);
+    }
+  });
+  $("#armor-project-close").addEventListener("click", () => projectPanel.close());
+  projectList.addEventListener("change", () => {
+    projectLoad.disabled = !projectList.value;
+  });
+  projectPanel.addEventListener("cancel", (event) => {
+    if ($("#armor-project-close").disabled) event.preventDefault();
+  });
+  $("#armor-project-save").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const name = projectName.value.trim();
+    if (!name) return;
+    setProjectBusy(true);
+    try {
+      await saveProject(captureProject(name));
+      await refreshProjectList(name);
+      projectStatus.textContent = "\u0421\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u043E: " + name;
+    } catch {
+      projectStatus.textContent = "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C \u043F\u0440\u043E\u0435\u043A\u0442. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0434\u043E\u0441\u0442\u0443\u043F \u043A \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0443 \u0431\u0440\u0430\u0443\u0437\u0435\u0440\u0430.";
+    } finally {
+      setProjectBusy(false);
+    }
+  });
+  projectLoad.addEventListener("click", async () => {
+    const name = projectList.value;
+    projectRelinks.replaceChildren();
+    setProjectBusy(true);
+    projectStatus.textContent = "\u041E\u0442\u043A\u0440\u044B\u0432\u0430\u044E\u2026";
+    try {
+      const { unavailable, modelsMissing } = await restoreProject(await loadProject(name));
+      projectName.value = name;
+      const notes = ["\u041E\u0442\u043A\u0440\u044B\u0442: " + name];
+      if (modelsMissing) notes.push("\u0427\u0430\u0441\u0442\u044C \u043C\u043E\u0434\u0435\u043B\u0435\u0439 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430.");
+      if (unavailable.length) notes.push("\u041F\u043E\u0434\u043A\u043B\u044E\u0447\u0438 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u044B\u0435 \u0444\u0430\u0439\u043B\u044B \u0437\u0430\u043D\u043E\u0432\u043E \u0438 \u0441\u043E\u0445\u0440\u0430\u043D\u0438 \u043F\u0440\u043E\u0435\u043A\u0442.");
+      projectStatus.textContent = notes.join(" ");
+      for (const [slot, filename] of unavailable) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = slots[slot] + " \xB7 " + filename;
+        button.addEventListener("click", () => {
+          projectPanel.close();
+          showPartSettings(slot, true);
+          sections[slot].querySelector("[data-pick]").click();
+        });
+        projectRelinks.append(button);
+      }
+    } catch (error) {
+      projectStatus.textContent = error.message || "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043E\u0442\u043A\u0440\u044B\u0442\u044C \u043F\u0440\u043E\u0435\u043A\u0442.";
+    } finally {
+      setProjectBusy(false);
+    }
+  });
   canvas.addEventListener("keydown", (event) => {
     if (!controls) return;
     if (quadMode) {

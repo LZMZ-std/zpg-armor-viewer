@@ -12,7 +12,7 @@
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--frame); color: var(--text); }
 [hidden] { display: none !important; }
-button, select { font: inherit; }
+button, select, input { font: inherit; }
 button {
   padding: 8px 12px;
   border: 1px solid var(--line);
@@ -155,7 +155,10 @@ button:disabled { opacity: .46; cursor: default; }
 .armor-close-panel { right: 12px; width: 30px; height: 30px; font-size: 18px; line-height: 1; }
 .armor-focus-button { right: 49px; min-height: 30px; font-size: 12px; }
 .armor-field { display: grid; gap: 6px; margin-top: 13px; color: var(--muted); font-size: 12px; }
-.armor-field select {
+.armor-mesh-name { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 6px; }
+.armor-mesh-name .armor-field input { font-family: Consolas, monospace; text-overflow: ellipsis; }
+.armor-mesh-name button { font-size: 12px; }
+.armor-field select, .armor-field input:not([type="checkbox"]) {
   width: 100%;
   min-width: 0;
   padding: 8px 10px;
@@ -166,6 +169,21 @@ button:disabled { opacity: .46; cursor: default; }
   font-size: 13px;
   text-overflow: ellipsis;
 }
+.armor-projects {
+  width: min(420px, calc(100% - 28px));
+  max-height: calc(100dvh - 36px);
+  overflow: auto;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--text);
+  background: var(--surface);
+}
+.armor-projects::backdrop { background: #0009; }
+.armor-projects h2 { margin: 0; font-size: 18px; }
+.armor-projects form { margin-top: 16px; border-top: 1px solid var(--line); }
+.armor-projects button:not(.armor-close-panel) { margin-top: 8px; }
+#armor-project-relinks button { display: block; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
 .armor-switch { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
 input[type="checkbox"] { accent-color: var(--accent); }
 .armor-note { margin: 8px 0 0; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
@@ -174,6 +192,8 @@ input[type="checkbox"] { accent-color: var(--accent); }
 label.armor-note { display: flex; align-items: center; gap: 5px; }
 .armor-texture-controls { border-top: 1px solid var(--line); padding-top: 13px; margin-top: 15px; }
 .armor-texture-controls h3 { font-size: 12px; margin: 0 0 8px; font-weight: 650; }
+.armor-texture-downloads { display: grid; gap: 5px; margin-bottom: 10px; }
+.armor-texture-downloads a { color: var(--accent); font-size: 12px; overflow-wrap: anywhere; }
 .armor-texture-actions { display: flex; gap: 7px; }
 .armor-texture-actions [data-pick] {
   flex: 1;

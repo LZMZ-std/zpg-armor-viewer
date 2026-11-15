@@ -9,6 +9,16 @@ export function watchTextures({ sections, apply, prepare, report, onChange }) {
   }
 
   async function refresh(slot, watch) {
+    if (watch.refreshing) return watch.refreshing;
+    watch.refreshing = readTexture(slot, watch);
+    try {
+      return await watch.refreshing;
+    } finally {
+      watch.refreshing = null;
+    }
+  }
+
+  async function readTexture(slot, watch) {
     try {
       const file = await watch.handle.getFile();
       if (watches.get(slot) !== watch) return;
@@ -29,7 +39,7 @@ export function watchTextures({ sections, apply, prepare, report, onChange }) {
         const detail = error.name === 'NotAllowedError'
           ? 'Доступ закрыт. Подключи файл заново.'
           : error.name === 'NotFoundError' || error.name === 'NotReadableError'
-            ? 'Файл временно недоступен.'
+            ? 'Файл недоступен. Если он перемещён, подключи его заново.'
             : error.message || 'Ошибка чтения файла.';
         reportWatch(slot, watch, 'error', detail);
       }
@@ -81,6 +91,25 @@ export function watchTextures({ sections, apply, prepare, report, onChange }) {
   setInterval(poll, 750);
   window.addEventListener('focus', poll);
   return {
+    snapshot() {
+      return Object.fromEntries(Array.from(watches, ([slot, watch]) => [slot, watch.handle]));
+    },
+    async restore(slot, handle) {
+      const watch = { handle };
+      watches.set(slot, watch);
+      onChange();
+      try {
+        if (await handle.queryPermission({ mode: 'read' }) !== 'granted') {
+          reportWatch(slot, watch, 'error', 'Подключи файл заново.');
+          return false;
+        }
+        await refresh(slot, watch);
+        return watch.version !== undefined;
+      } catch {
+        reportWatch(slot, watch, 'error', 'Файл недоступен. Подключи его заново.');
+        return false;
+      }
+    },
     has(slot) {
       return watches.has(slot);
     },
